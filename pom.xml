@@ -12,6 +12,7 @@
         <java.version>8</java.version>
         <scala.version>2.12</scala.version>
         <akka.version>2.5.19</akka.version>
+        <akka.http.version>10.1.7</akka.http.version>
         <akka.cluster.bootstrap.version>0.20.0</akka.cluster.bootstrap.version>
         <docker.image.version>1.0.2</docker.image.version>
     </properties>
@@ -53,7 +54,22 @@
             <version>${akka.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-http_${scala.version}</artifactId>
+            <version>${akka.http.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-http-spray-json_${scala.version}</artifactId>
+            <version>${akka.http.version}</version>
+        </dependency>
 
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-stream_${scala.version}</artifactId>
+            <version>${akka.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.lightbend.akka.management</groupId>
             <artifactId>akka-management-cluster-bootstrap_${scala.version}</artifactId>
@@ -62,6 +78,11 @@
         <dependency>
             <groupId>com.lightbend.akka.discovery</groupId>
             <artifactId>akka-discovery-kubernetes-api_${scala.version}</artifactId>
+            <version>${akka.cluster.bootstrap.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.lightbend.akka.management</groupId>
+            <artifactId>akka-management-cluster-http_${scala.version}</artifactId>
             <version>${akka.cluster.bootstrap.version}</version>
         </dependency>
     </dependencies>

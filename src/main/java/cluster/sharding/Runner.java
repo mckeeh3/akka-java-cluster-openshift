@@ -29,10 +29,10 @@ public class Runner {
 
         actorSystem.actorOf(ClusterListenerActor.props(), "clusterListener");
 
-//        ActorRef shardingRegion = setupClusterSharding(actorSystem);
-//
-//        actorSystem.actorOf(EntityCommandActor.props(shardingRegion), "entityCommand");
-//        actorSystem.actorOf(EntityQueryActor.props(shardingRegion), "entityQuery");
+        ActorRef shardingRegion = setupClusterSharding(actorSystem);
+
+        actorSystem.actorOf(EntityCommandActor.props(shardingRegion), "entityCommand");
+        actorSystem.actorOf(EntityQueryActor.props(shardingRegion), "entityQuery");
 
         addCoordinatedShutdownTask(actorSystem, CoordinatedShutdown.PhaseClusterShutdown());
 
