@@ -184,6 +184,35 @@ public class HttpServerActor extends AbstractLoggingActor {
             return this;
         }
 
+        Tree find(String name, String type) {
+            if (this.name.equals(name) && this.type.equals(type)) {
+                return this;
+            } else {
+                for (Tree child : children) {
+                    Tree found = child.find(name, type);
+                    if (found != null) {
+                        return found;
+                    }
+                }
+            }
+            return null;
+        }
+
+        Tree remove(String name, String type) {
+            for (Tree child : children) {
+                if (child.name.equals(name) && child.type.equals(type)) {
+                    children.remove(child);
+                    return child;
+                } else{
+                    Tree found = child.remove(name, type);
+                    if (found != null) {
+                        return found;
+                    }
+                }
+            }
+            return null;
+        }
+
         @Override
         public String toString() {
             return String.format("%s[%s, %s]", getClass().getSimpleName(), name, type);

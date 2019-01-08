@@ -72,9 +72,26 @@ class EntityMessage {
         }
     }
 
-    static ShardRegion.MessageExtractor messageExtractor() {
-        final int numberOfShards = 100;
+    static class Action implements Serializable {
+        final String member;
+        final int shardId;
+        final int entityId;
+        final String action;
 
+        Action(String member, int shardId, int entityId, String action) {
+            this.member = member;
+            this.shardId = shardId;
+            this.entityId = entityId;
+            this.action = action;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("%s[%s, %d, %d, %s]", getClass().getSimpleName(), member, shardId, entityId, action);
+        }
+    }
+
+    static ShardRegion.MessageExtractor messageExtractor() {
         return new ShardRegion.MessageExtractor() {
             @Override
             public String shardId(Object message) {
@@ -90,26 +107,28 @@ class EntityMessage {
             public Object entityMessage(Object message) {
                 return message;
             }
-
-            private String extractShardIdFromCommands(Object message) {
-                if (message instanceof Command) {
-                    return ((Command) message).entity.id.id.hashCode() % numberOfShards + "";
-                } else if (message instanceof Query) {
-                    return ((Query) message).id.id.hashCode() % numberOfShards + "";
-                } else {
-                    return null;
-                }
-            }
-
-            private String extractEntityIdFromCommands(Object message) {
-                if (message instanceof Command) {
-                    return ((Command) message).entity.id.id;
-                } else if (message instanceof Query) {
-                    return ((Query) message).id.id;
-                } else {
-                    return null;
-                }
-            }
         };
+    }
+
+    static String extractShardIdFromCommands(Object message) {
+        int numberOfShards = 100;
+
+        if (message instanceof Command) {
+            return ((Command) message).entity.id.id.hashCode() % numberOfShards + "";
+        } else if (message instanceof Query) {
+            return ((Query) message).id.id.hashCode() % numberOfShards + "";
+        } else {
+            return null;
+        }
+    }
+
+    static String extractEntityIdFromCommands(Object message) {
+        if (message instanceof Command) {
+            return ((Command) message).entity.id.id;
+        } else if (message instanceof Query) {
+            return ((Query) message).id.id;
+        } else {
+            return null;
+        }
     }
 }
