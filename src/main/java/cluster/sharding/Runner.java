@@ -28,6 +28,7 @@ public class Runner {
                 actorSystem.settings().config().getString("akka.discovery.kubernetes-api.pod-label-selector"));
 
         actorSystem.actorOf(ClusterListenerActor.props(), "clusterListener");
+        actorSystem.actorOf(HttpServerActor.props(), "httpServer");
 
         ActorRef shardingRegion = setupClusterSharding(actorSystem);
 

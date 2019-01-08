@@ -1,89 +1,78 @@
 package cluster.sharding;
 
-import akka.Done;
 import akka.NotUsed;
+import akka.actor.AbstractLoggingActor;
 import akka.actor.ActorSystem;
-import akka.cluster.Cluster;
-import akka.event.LoggingAdapter;
+import akka.actor.Props;
 import akka.http.javadsl.ConnectHttp;
 import akka.http.javadsl.Http;
 import akka.http.javadsl.ServerBinding;
-import akka.http.javadsl.model.*;
+import akka.http.javadsl.model.ContentTypes;
+import akka.http.javadsl.model.HttpRequest;
+import akka.http.javadsl.model.HttpResponse;
+import akka.http.javadsl.model.StatusCodes;
 import akka.http.javadsl.model.ws.Message;
 import akka.http.javadsl.model.ws.TextMessage;
-import akka.http.javadsl.model.ws.UpgradeToWebSocket;
 import akka.http.javadsl.model.ws.WebSocket;
-import akka.http.javadsl.server.AllDirectives;
 import akka.japi.JavaPartialFunction;
 import akka.stream.ActorMaterializer;
-import akka.stream.OverflowStrategy;
-import akka.stream.QueueOfferResult;
-import akka.stream.javadsl.*;
+import akka.stream.javadsl.Flow;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import org.reactivestreams.Subscriber;
 
 import java.io.Serializable;
-import java.util.*;
-import java.util.Random;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class HttpServerTest extends AllDirectives {
-    private final ActorSystem actorSystem;
-    private final String actorSystemNode;
-    private final ActorMaterializer actorMaterializer;
-    private final Source<Message, SourceQueueWithComplete<Message>> queue;
-    private final SourceQueueWithComplete<Message> queueOffer;
-    private final LoggingAdapter log;
-    private final Random random = new Random();
+public class HttpServerActor extends AbstractLoggingActor {
+    private ActorSystem actorSystem = context().system();
+    private ActorMaterializer actorMaterializer = ActorMaterializer.create(actorSystem);
 
-    private HttpServerTest() {
-        actorSystem = ActorSystem.create();
-        actorSystemNode = Cluster.get(actorSystem).selfMember().address().toString();
-        actorMaterializer = ActorMaterializer.create(actorSystem);
-        log = actorSystem.log();
-        queue = Source.queue(10240, OverflowStrategy.dropHead());
-        queueOffer = queue.to(Sink.foreach(m -> log.info("to client '{}'", m.asTextMessage().getStrictText()))).run(actorMaterializer);
+    @Override
+    public Receive createReceive() {
+        return receiveBuilder()
+                .build();
     }
 
-    public static void main(String[] args) {
-        //new HttpServerTest().run();
-
-        try {
-            HttpServerTest.testTree();
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-
+    @Override
+    public void preStart() {
+        log().info("Start");
+        startHttpServer();
     }
 
-    private void run() {
+    private void startHttpServer() {
         int serverPort = 8080;
 
-        CompletionStage<ServerBinding> serverBindingCompletionStage = Http.get(actorSystem)
-                .bindAndHandleSync(this::handleHttpRequest, ConnectHttp.toHost("localhost", serverPort), actorMaterializer);
-
         try {
+            CompletionStage<ServerBinding> serverBindingCompletionStage = Http.get(actorSystem)
+                    .bindAndHandleSync(this::handleHttpRequest, ConnectHttp.toHost(InetAddress.getLocalHost().getHostName(), serverPort), actorMaterializer);
+
             serverBindingCompletionStage.toCompletableFuture().get(15, TimeUnit.SECONDS);
+        } catch (UnknownHostException e) {
+            log().error(e, "Unable to access hostname");
         } catch (InterruptedException | TimeoutException | ExecutionException e) {
-            log.error(e, "Monitor HTTP server error");
+            log().error(e, "Monitor HTTP server error");
         } finally {
-            log.info("Monitor HTTP server started on port {}", serverPort);
+            log().info("HTTP server started on port {}", serverPort);
         }
     }
 
     private HttpResponse handleHttpRequest(HttpRequest httpRequest) {
         switch (httpRequest.getUri().path()) {
+            case "/":
+                return getWebPage();
             case "/monitor":
                 return getWebPage();
-            case "/test":
-                return makeTestOffer();
             case "/events":
-                return webSocketHandler2(httpRequest);
+                return webSocketHandler(httpRequest);
             default:
                 return HttpResponse.create().withStatus(404);
         }
@@ -95,88 +84,14 @@ public class HttpServerTest extends AllDirectives {
                 .withStatus(StatusCodes.ACCEPTED);
     }
 
-    private HttpResponse makeTestOffer() {
-        makeOffer(generateRandomEventMessage());
-        return HttpResponse.create().withStatus(200);
-    }
-
-    private HttpResponse webSocketHandler1(HttpRequest httpRequest) {
-        Optional<HttpHeader> upgradeToWebSocket = httpRequest.getHeader("UpgradeToWebSocket");
-        if (upgradeToWebSocket.isPresent()) {
-            return webSocketHandler(upgradeToWebSocket.get());
-        } else {
-            return HttpResponse.create().withStatus(400);
-        }
-    }
-
-    private HttpResponse webSocketHandler(HttpHeader upgradeToWebSocketHeader) {
-//        Sink<TextMessage, Source<TextMessage, NotUsed>> sourceSink = BroadcastHub.of(TextMessage.class, 256);
-//
-//        Sink<Message, CompletionStage<Done>> consumer = Sink.foreach(System.out::println);
-//        MergeHub.of(Message.class, 16).to(consumer);
-//
-//        Sink<Message, CompletionStage<Done>> sink = Sink.ignore();
-//        Source.fromPublisher(this::publisher);
-//        Source<Message, Message> source;
-//        Flow<Message, Message, NotUsed> flow = Flow.<Message>create().fromSinkAndSource(sink, source);
-
-
-        UpgradeToWebSocket upgradeToWebSocket = (UpgradeToWebSocket) upgradeToWebSocketHeader;
-
-        return upgradeToWebSocket.handleMessagesWith(
-                Sink.foreach(m -> log.info("from client '{}'", m.asTextMessage().getStrictText())),
-                queue);
-    }
-
-    private <O> void publisher(Subscriber<? super O> subscriber) {
-        //
-    }
-
-    private HttpResponse webSocketHandler2(HttpRequest httpRequest) {
-        Flow<Message, Message, NotUsed> flow = Flow.<Message>create()
-                .collect(new JavaPartialFunction<Message, Message>() {
-                    @Override
-                    public Message apply(Message message, boolean isCheck) {
-                        if (isCheck && message.isText()) {
-                            return null;
-                        } else if (isCheck && !message.isText()) {
-                            throw noMatch();
-                        } else if (message.asTextMessage().isStrict()) {
-                            return TextMessage.create(generateRandomEventMessage());
-                        } else {
-                            return TextMessage.create("");
-                        }
-                    }
-                });
-
-        return WebSocket.handleWebSocketRequestWith(httpRequest, flow);
-    }
-
-    private void makeOffer(String messageText) {
-        queueOffer.offer(TextMessage.create(messageText))
-                .whenComplete((r, e) -> {
-                    if (r.equals(QueueOfferResult.enqueued())) {
-                        log.info("offered '{}'", messageText);
-                    } else {
-                        log.warning("WebSocket message error", e);
-                    }
-                });
-    }
-
-    private String generateRandomEventMessage() {
-        int id = random.nextInt(100) + 1;
-        int shard = id % 10;
-        return String.format("%s, %d, %d", actorSystemNode, shard, id);
-    }
-
-    private static String monitorWebPage() {
+    private String monitorWebPage() {
         StringBuilder html = new StringBuilder();
         line(html, "<!DOCTYPE html>");
         line(html, "<html>");
         line(html, "  <head>");
         line(html, "    <script src=\"https://d3js.org/d3.v4.min.js\"></script>\n");
         line(html, "    <script>");
-        line(html, "      var webSocket = new WebSocket('ws://localhost:8080/events');");
+        line(html, "      var webSocket = new WebSocket('ws://' + location.host + '/events');");
         line(html, "");
         line(html, "      webSocket.onopen = function(event) {");
         line(html, "        webSocket.send('request')");
@@ -217,7 +132,65 @@ public class HttpServerTest extends AllDirectives {
         html.append(String.format("%s%n", line));
     }
 
-    private static void testTree() throws JsonProcessingException {
+    private HttpResponse webSocketHandler(HttpRequest httpRequest) {
+        Flow<Message, Message, NotUsed> flow = Flow.<Message>create()
+                .collect(new JavaPartialFunction<Message, Message>() {
+                    @Override
+                    public Message apply(Message message, boolean isCheck) {
+                        if (isCheck && message.isText()) {
+                            return null;
+                        } else if (isCheck && !message.isText()) {
+                            throw noMatch();
+                        } else if (message.asTextMessage().isStrict()) {
+                            return TextMessage.create(generateRandomEventMessage());
+                        } else {
+                            return TextMessage.create("");
+                        }
+                    }
+                });
+
+        return WebSocket.handleWebSocketRequestWith(httpRequest, flow);
+    }
+
+    private String generateRandomEventMessage() {
+        return testTree();
+    }
+
+    @Override
+    public void postStop() {
+        log().info("Stop");
+    }
+
+    static Props props() {
+        return Props.create(HttpServerActor.class);
+    }
+
+    public static class Tree implements Serializable {
+        public final String name;
+        public final String type;
+        public final List<Tree> children = new ArrayList<>();
+
+        public Tree(String name, String type) {
+            this.name = name;
+            this.type = type;
+        }
+
+        static Tree create(String name, String type) {
+            return new Tree(name, type);
+        }
+
+        Tree children(Tree... children) {
+            this.children.addAll(Arrays.asList(children));
+            return this;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("%s[%s, %s]", getClass().getSimpleName(), name, type);
+        }
+    }
+
+    private static String testTree() {
         Tree root = Tree.create("cluster", "cluster")
                 .children(
                         Tree.create("node1", "node")
@@ -307,32 +280,10 @@ public class HttpServerTest extends AllDirectives {
                 );
 
         ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
-        String json = ow.writeValueAsString(root);
-        System.out.println(json);
-    }
-
-    public static class Tree implements Serializable {
-        public final String name;
-        public final String type;
-        public final List<Tree> children = new ArrayList<>();
-
-        public Tree(String name, String type) {
-            this.name = name;
-            this.type = type;
-        }
-
-        static Tree create(String name, String type) {
-            return new Tree(name, type);
-        }
-
-        Tree children(Tree... children) {
-            this.children.addAll(Arrays.asList(children));
-            return this;
-        }
-
-        @Override
-        public String toString() {
-            return String.format("%s[%s, %s]", getClass().getSimpleName(), name, type);
+        try {
+            return ow.writeValueAsString(root);
+        } catch (JsonProcessingException e) {
+            return String.format("{ \"error\" : \"%s\" }", e.getMessage());
         }
     }
 }

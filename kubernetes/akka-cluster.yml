@@ -30,6 +30,9 @@ spec:
           tcpSocket:
             port: 8558
         ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
         # akka remoting
         - name: remoting
           containerPort: 2552
@@ -38,9 +41,6 @@ spec:
         # must match up with contact-point-discovery.port-name for bootstrap
         - name: management
           containerPort: 8558
-          protocol: TCP
-        - name: http
-          containerPort: 8080
           protocol: TCP
         env:
           - name: NAMESPACE
