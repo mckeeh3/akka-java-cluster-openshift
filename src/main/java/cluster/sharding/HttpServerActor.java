@@ -4,6 +4,7 @@ import akka.NotUsed;
 import akka.actor.AbstractLoggingActor;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
+import akka.cluster.Cluster;
 import akka.http.javadsl.ConnectHttp;
 import akka.http.javadsl.Http;
 import akka.http.javadsl.ServerBinding;
@@ -35,11 +36,22 @@ import java.util.concurrent.TimeoutException;
 public class HttpServerActor extends AbstractLoggingActor {
     private ActorSystem actorSystem = context().system();
     private ActorMaterializer actorMaterializer = ActorMaterializer.create(actorSystem);
+    private final Cluster cluster = Cluster.get(actorSystem);
+    private final Tree tree = new Tree("cluster", "cluster");
 
     @Override
     public Receive createReceive() {
         return receiveBuilder()
+                .match(EntityMessage.Action.class, this::entityMessage)
                 .build();
+    }
+
+    private void entityMessage(EntityMessage.Action action) {
+        if (action.action.equals("start")) {
+            tree.add(action.member, action.shardId, action.entityId);
+        } else if (action.action.equals("stop")) {
+            tree.remove(action.entityId + "", "entity");
+        }
     }
 
     @Override
@@ -84,46 +96,388 @@ public class HttpServerActor extends AbstractLoggingActor {
                 .withStatus(StatusCodes.ACCEPTED);
     }
 
+    /**
+     * To change this web page edit the file src/test/resources/force-collapsible.html.
+     * Then run the test class JsToJava.
+     * Take the output from JsToJava and paste into this method.
+     *
+     * @return the monitor HTML page
+     */
     private String monitorWebPage() {
         StringBuilder html = new StringBuilder();
+
         line(html, "<!DOCTYPE html>");
         line(html, "<html>");
         line(html, "  <head>");
-        line(html, "    <script src=\"https://d3js.org/d3.v4.min.js\"></script>\n");
-        line(html, "    <script>");
-        line(html, "      var webSocket = new WebSocket('ws://' + location.host + '/events');");
+        line(html, "    <meta http-equiv='Content-Type' content='text/html;charset=utf-8'>");
+        line(html, "    <style type='text/css'>");
         line(html, "");
-        line(html, "      webSocket.onopen = function(event) {");
-        line(html, "        webSocket.send('request')");
-        line(html, "        console.log('WebSocket connected', event)");
-        line(html, "      }");
+        line(html, "circle.node {");
+        line(html, "  cursor: pointer;");
+        line(html, "  stroke: #000;");
+        line(html, "  stroke-width: .5px;");
+        line(html, "}");
         line(html, "");
-        line(html, "      webSocket.onmessage = function(event) {");
-        line(html, "        console.log(event);");
-        //line(html, "        webSocket.send('request')");
-        line(html, "      }");
+        line(html, "line.link {");
+        line(html, "  fill: none;");
+        line(html, "  stroke: #9ecae1;");
+        line(html, "  stroke-width: 1.5px;");
+        line(html, "}");
         line(html, "");
-        line(html, "      webSocket.onerror = function(error) {");
-        line(html, "        console.error('WebSocket error', error);");
-        line(html, "      }");
+        line(html, "body {");
+        line(html, "  font: 300 36px 'Helvetica Neue';");
+        line(html, "  height: 640px;");
+        line(html, "  margin: 80px 160px 80px 160px;");
+        line(html, "  overflow: hidden;");
+        line(html, "  position: relative;");
+        line(html, "  width: 960px;");
+        line(html, "}");
         line(html, "");
-        line(html, "      webSocket.onclose = function(event) {");
-        line(html, "        console.log('WebSocket close', event);");
-        line(html, "      }");
+        line(html, "a:link, a:visited {");
+        line(html, "  color: #777;");
+        line(html, "  text-decoration: none;");
+        line(html, "}");
         line(html, "");
-        line(html, "      var canvas = document.querySelector(\"canvas\"),");
-        line(html, "          context = canvas.getContext(\"2d\"),");
-        line(html, "          width = canvas.width,");
-        line(html, "          height = canvas.height;");
+        line(html, "a:hover {");
+        line(html, "  color: #666;");
+        line(html, "}");
         line(html, "");
-        line(html, "    </script>");
+        line(html, "blockquote {");
+        line(html, "  margin: 0;");
+        line(html, "}");
+        line(html, "");
+        line(html, "blockquote:before {");
+        line(html, "  content: '“';");
+        line(html, "  position: absolute;");
+        line(html, "  left: -.4em;");
+        line(html, "}");
+        line(html, "");
+        line(html, "blockquote:after {");
+        line(html, "  content: '”';");
+        line(html, "  position: absolute;");
+        line(html, "}");
+        line(html, "");
+        line(html, "body > ul {");
+        line(html, "  margin: 0;");
+        line(html, "  padding: 0;");
+        line(html, "}");
+        line(html, "");
+        line(html, "h1 {");
+        line(html, "  font-size: 64px;");
+        line(html, "}");
+        line(html, "");
+        line(html, "h1, h2, h3 {");
+        line(html, "  font-weight: inherit;");
+        line(html, "  margin: 0;");
+        line(html, "}");
+        line(html, "");
+        line(html, "h2, h3 {");
+        line(html, "  text-align: right;");
+        line(html, "  font-size: inherit;");
+        line(html, "  position: absolute;");
+        line(html, "  bottom: 0;");
+        line(html, "  right: 0;");
+        line(html, "}");
+        line(html, "");
+        line(html, "h2 {");
+        line(html, "  font-size: 24px;");
+        line(html, "  position: absolute;");
+        line(html, "}");
+        line(html, "");
+        line(html, "h3 {");
+        line(html, "  bottom: -20px;");
+        line(html, "  font-size: 18px;");
+        line(html, "}");
+        line(html, "");
+        line(html, ".invert {");
+        line(html, "  background: #1f1f1f;");
+        line(html, "  color: #dcdccc;");
+        line(html, "}");
+        line(html, "");
+        line(html, ".invert h2, .invert h3 {");
+        line(html, "  color: #7f9f7f;");
+        line(html, "}");
+        line(html, "");
+        line(html, ".string, .regexp {");
+        line(html, "  color: #f39;");
+        line(html, "}");
+        line(html, "");
+        line(html, ".keyword {");
+        line(html, "  color: #00c;");
+        line(html, "}");
+        line(html, "");
+        line(html, ".comment {");
+        line(html, "  color: #777;");
+        line(html, "  font-style: oblique;");
+        line(html, "}");
+        line(html, "");
+        line(html, ".number {");
+        line(html, "  color: #369;");
+        line(html, "}");
+        line(html, "");
+        line(html, ".class, .special {");
+        line(html, "  color: #1181B8;");
+        line(html, "}");
+        line(html, "");
+        line(html, "body > svg {");
+        line(html, "  position: absolute;");
+        line(html, "  top: -80px;");
+        line(html, "  left: -160px;");
+        line(html, "}");
+        line(html, "");
+        line(html, "    </style>");
         line(html, "  </head>");
         line(html, "  <body>");
-        line(html, "    <h3>Hello, World!</h3>");
-        line(html, "    <canvas width=\"960\" height=\"960\"></canvas>");
+        line(html, "    <h2>");
+        line(html, "      Akka OpenShift cluster<br>");
+        line(html, "      force-directed graph");
+        line(html, "    </h2>");
+        line(html, "    <script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.js'></script>");
+        line(html, "    <script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.geom.js'></script>");
+        line(html, "    <script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.layout.js'></script>");
+        line(html, "    <script type='text/javascript'>");
+        line(html, "");
+        line(html, "var webSocket = new WebSocket('ws://' + location.host + '/events');");
+        line(html, "");
+        line(html, "webSocket.onopen = function(event) {");
+        line(html, "  webSocket.send('request')");
+        line(html, "  console.log('WebSocket connected', event)");
+        line(html, "}");
+        line(html, "");
+        line(html, "webSocket.onmessage = function(event) {");
+        line(html, "  console.log(event);");
+        line(html, "}");
+        line(html, "");
+        line(html, "webSocket.onerror = function(error) {");
+        line(html, "  console.error('WebSocket error', error);");
+        line(html, "}");
+        line(html, "");
+        line(html, "webSocket.onclose = function(event) {");
+        line(html, "  console.log('WebSocket close', event);");
+        line(html, "}");
+        line(html, "");
+        line(html, "var w = 1280,");
+        line(html, "    h = 800,");
+        line(html, "    node,");
+        line(html, "    link,");
+        line(html, "    root;");
+        line(html, "");
+        line(html, "var force = d3.layout.force()");
+        line(html, "    .on('tick', tick)");
+        line(html, "    .charge(function(d) {");
+        line(html, "        return d._children ? -d.size / 100 : -300;");
+        line(html, "    })");
+        line(html, "    .linkDistance(function(d) {");
+        line(html, "        return d.target._children ? 80 : 50;");
+        line(html, "    })");
+        line(html, "    .size([w, h - 100]);");
+        line(html, "");
+        line(html, "var vis = d3.select('body').append('svg:svg')");
+        line(html, "    .attr('width', w)");
+        line(html, "    .attr('height', h);");
+        line(html, "");
+        line(html, "root = root();");
+        line(html, "root.fixed = true;");
+        line(html, "root.x = w / 2;");
+        line(html, "root.y = h / 2 - 80;");
+        line(html, "update();");
+        line(html, "");
+        line(html, "function update() {");
+        line(html, "  var nodes = flatten(root),");
+        line(html, "      links = d3.layout.tree().links(nodes);");
+        line(html, "");
+        line(html, "  force");
+        line(html, "      .nodes(nodes)");
+        line(html, "      .links(links)");
+        line(html, "      .start();");
+        line(html, "");
+        line(html, "  link = vis.selectAll('line.link')");
+        line(html, "      .data(links, function(d) { return d.target.id; });");
+        line(html, "");
+        line(html, "  link.enter().insert('svg:line', '.node')");
+        line(html, "      .attr('class', 'link')");
+        line(html, "      .attr('x1', function(d) { return d.source.x; })");
+        line(html, "      .attr('y1', function(d) { return d.source.y; })");
+        line(html, "      .attr('x2', function(d) { return d.target.x; })");
+        line(html, "      .attr('y2', function(d) { return d.target.y; });");
+        line(html, "");
+        line(html, "  link.exit().remove();");
+        line(html, "");
+        line(html, "  node = vis.selectAll('circle.node')");
+        line(html, "      .data(nodes, function(d) { return d.id; })");
+        line(html, "      .style('fill', color);");
+        line(html, "");
+        line(html, "  node.transition()");
+        line(html, "      .attr('r', radius);");
+        line(html, "");
+        line(html, "  node.enter().append('svg:circle')");
+        line(html, "      .attr('class', function(d) { return d.type ? 'node ' + d.type : 'node'; })");
+        line(html, "      .attr('cx', function(d) { return d.x; })");
+        line(html, "      .attr('cy', function(d) { return d.y; })");
+        line(html, "      .attr('r', radius)");
+        line(html, "      .style('fill', color)");
+        line(html, "      .on('click', click)");
+        line(html, "      .call(force.drag);");
+        line(html, "");
+        line(html, "  node.exit().remove();");
+        line(html, "}");
+        line(html, "");
+        line(html, "function tick() {");
+        line(html, "  link.attr('x1', function(d) { return d.source.x; })");
+        line(html, "      .attr('y1', function(d) { return d.source.y; })");
+        line(html, "      .attr('x2', function(d) { return d.target.x; })");
+        line(html, "      .attr('y2', function(d) { return d.target.y; });");
+        line(html, "");
+        line(html, "  node.attr('cx', function(d) { return d.x; })");
+        line(html, "      .attr('cy', function(d) { return d.y; });");
+        line(html, "}");
+        line(html, "");
+        line(html, "function color(d) {");
+        line(html, "    if (d._children) {");
+        line(html, "        return '#3182bd';");
+        line(html, "    } else if (d.type == 'cluster') {");
+        line(html, "        return '#B30000';");
+        line(html, "    } else if (d.type == 'member') {");
+        line(html, "        return '#F17D00';");
+        line(html, "    } else if (d.type == 'shard') {");
+        line(html, "        return '#00C000';");
+        line(html, "    } else if (d.type == 'entity') {");
+        line(html, "        return '#046E97';");
+        line(html, "    } else {");
+        line(html, "        return '#fd8d3c';");
+        line(html, "    }");
+        line(html, "}");
+        line(html, "");
+        line(html, "function radius(d) {");
+        line(html, "    if (d._children) {");
+        line(html, "        return Math.sqrt(d.size) / 10;");
+        line(html, "    } else if (d.type == 'cluster') {");
+        line(html, "        return 6;");
+        line(html, "    } else if (d.type == 'member') {");
+        line(html, "        return 20;");
+        line(html, "    } else if (d.type == 'shard') {");
+        line(html, "        return 10;");
+        line(html, "    } else if (d.type == 'entity') {");
+        line(html, "        return 5;");
+        line(html, "    } else {");
+        line(html, "        return 4.5;");
+        line(html, "    }");
+        line(html, "}");
+        line(html, "");
+        line(html, "function click(d) {");
+        line(html, "  if (d.children) {");
+        line(html, "    d._children = d.children;");
+        line(html, "    d.children = null;");
+        line(html, "  } else {");
+        line(html, "    d.children = d._children;");
+        line(html, "    d._children = null;");
+        line(html, "  }");
+        line(html, "  update();");
+        line(html, "}");
+        line(html, "");
+        line(html, "function flatten(root) {");
+        line(html, "  var nodes = [], i = 0;");
+        line(html, "");
+        line(html, "  function recurse(node) {");
+        line(html, "    if (node.children) node.size = node.children.reduce(function(p, v) { return p + recurse(v); }, 0);");
+        line(html, "    if (!node.id) node.id = ++i;");
+        line(html, "    nodes.push(node);");
+        line(html, "    return node.size;");
+        line(html, "  }");
+        line(html, "");
+        line(html, "  root.size = recurse(root);");
+        line(html, "  return nodes;");
+        line(html, "}");
+        line(html, "");
+        line(html, "function root() {");
+        line(html, "    return {");
+        line(html, "        'name' : 'cluster',");
+        line(html, "        'type' : 'cluster',");
+        line(html, "        'children' : [");
+        line(html, "            {");
+        line(html, "                'name' : 'member1',");
+        line(html, "                'type' : 'member',");
+        line(html, "                'children' : [");
+        line(html, "                    {");
+        line(html, "                        'name' : 'shard1',");
+        line(html, "                        'type' : 'shard',");
+        line(html, "                        'children' : [");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 }");
+        line(html, "                        ]");
+        line(html, "                    },");
+        line(html, "                    {");
+        line(html, "                        'name' : 'shard2',");
+        line(html, "                        'type' : 'shard',");
+        line(html, "                        'children' : [");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 }");
+        line(html, "                        ]");
+        line(html, "                    },");
+        line(html, "                ]");
+        line(html, "            },");
+        line(html, "            {");
+        line(html, "                'name' : 'member1',");
+        line(html, "                'type' : 'member',");
+        line(html, "                'children' : [");
+        line(html, "                    {");
+        line(html, "                        'name' : 'shard1',");
+        line(html, "                        'type' : 'shard',");
+        line(html, "                        'children' : [");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 }");
+        line(html, "                        ]");
+        line(html, "                    },");
+        line(html, "                    {");
+        line(html, "                        'name' : 'shard2',");
+        line(html, "                        'type' : 'shard',");
+        line(html, "                        'children' : [");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 }");
+        line(html, "                        ]");
+        line(html, "                    },");
+        line(html, "                ]");
+        line(html, "            },");
+        line(html, "            {");
+        line(html, "                'name' : 'member1',");
+        line(html, "                'type' : 'member',");
+        line(html, "                'children' : [");
+        line(html, "                    {");
+        line(html, "                        'name' : 'shard1',");
+        line(html, "                        'type' : 'shard',");
+        line(html, "                        'children' : [");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 }");
+        line(html, "                        ]");
+        line(html, "                    },");
+        line(html, "                    {");
+        line(html, "                        'name' : 'shard2',");
+        line(html, "                        'type' : 'shard',");
+        line(html, "                        'children' : [");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
+        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 }");
+        line(html, "                        ]");
+        line(html, "                    },");
+        line(html, "                ]");
+        line(html, "            },");
+        line(html, "        ]");
+        line(html, "    }");
+        line(html, "}");
+        line(html, "    </script>");
         line(html, "  </body>");
         line(html, "</html>");
-        line(html, "");
 
         return html.toString();
     }
@@ -142,7 +496,7 @@ public class HttpServerActor extends AbstractLoggingActor {
                         } else if (isCheck && !message.isText()) {
                             throw noMatch();
                         } else if (message.asTextMessage().isStrict()) {
-                            return TextMessage.create(generateRandomEventMessage());
+                            return getTreeAsJson();
                         } else {
                             return TextMessage.create("");
                         }
@@ -152,8 +506,9 @@ public class HttpServerActor extends AbstractLoggingActor {
         return WebSocket.handleWebSocketRequestWith(httpRequest, flow);
     }
 
-    private String generateRandomEventMessage() {
-        return testTree();
+    private Message getTreeAsJson() {
+        //return TextMessage.create(tree.toJson());
+        return TextMessage.create(testTree().toJson());
     }
 
     @Override
@@ -184,6 +539,28 @@ public class HttpServerActor extends AbstractLoggingActor {
             return this;
         }
 
+        void add(String memberId, int shardId, int entityId) {
+            add(memberId, shardId + "", entityId + "");
+        }
+
+        void add(String memberId, String shardId, String entityId) {
+            Tree member = find(memberId, "member");
+            if (member == null) {
+                member = Tree.create(memberId, "member");
+                children.add(member);
+            }
+            Tree shard = find(shardId, "shard");
+            if (shard == null) {
+                shard = Tree.create(shardId, "shard");
+                member.children.add(shard);
+            }
+            Tree entity = find(entityId, "entity");
+            if (entity == null) {
+                entity = Tree.create(entityId, "entity");
+                shard.children.add(entity);
+            }
+        }
+
         Tree find(String name, String type) {
             if (this.name.equals(name) && this.type.equals(type)) {
                 return this;
@@ -203,7 +580,7 @@ public class HttpServerActor extends AbstractLoggingActor {
                 if (child.name.equals(name) && child.type.equals(type)) {
                     children.remove(child);
                     return child;
-                } else{
+                } else {
                     Tree found = child.remove(name, type);
                     if (found != null) {
                         return found;
@@ -213,14 +590,23 @@ public class HttpServerActor extends AbstractLoggingActor {
             return null;
         }
 
+        String toJson() {
+            ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+            try {
+                return ow.writeValueAsString(this);
+            } catch (JsonProcessingException e) {
+                return String.format("{ \"error\" : \"%s\" }", e.getMessage());
+            }
+        }
+
         @Override
         public String toString() {
             return String.format("%s[%s, %s]", getClass().getSimpleName(), name, type);
         }
     }
 
-    private static String testTree() {
-        Tree root = Tree.create("cluster", "cluster")
+    private static Tree testTree() {
+        return Tree.create("cluster", "cluster")
                 .children(
                         Tree.create("node1", "node")
                                 .children(
@@ -307,12 +693,5 @@ public class HttpServerActor extends AbstractLoggingActor {
                                                 )
                                 )
                 );
-
-        ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
-        try {
-            return ow.writeValueAsString(root);
-        } catch (JsonProcessingException e) {
-            return String.format("{ \"error\" : \"%s\" }", e.getMessage());
-        }
     }
 }

@@ -73,6 +73,46 @@ public class TreeTest {
         Assert.assertNull(tree.find("entity26", "entity"));
     }
 
+    @Test
+    public void addToEmptyTree() {
+        HttpServerActor.Tree tree = new HttpServerActor.Tree("cluster", "cluster");
+
+        Assert.assertNull(tree.find("member1", "member"));
+        Assert.assertNull(tree.find("shard01", "shard"));
+        Assert.assertNull(tree.find("entity01", "entity"));
+
+        tree.add("member1", "shard01", "entity01");
+
+        Assert.assertNotNull(tree.find("member1", "member"));
+        Assert.assertNotNull(tree.find("shard01", "shard"));
+        Assert.assertNotNull(tree.find("entity01", "entity"));
+
+        tree.add("member1", "shard01", "entity01");
+
+        Assert.assertNotNull(tree.find("member1", "member"));
+        Assert.assertNotNull(tree.find("shard01", "shard"));
+        Assert.assertNotNull(tree.find("entity01", "entity"));
+
+        tree.add("member1", "shard01", "entity02");
+
+        Assert.assertNotNull(tree.find("member1", "member"));
+        Assert.assertNotNull(tree.find("shard01", "shard"));
+        Assert.assertNotNull(tree.find("entity02", "entity"));
+
+        tree.add("member2", "shard04", "entity12");
+
+        Assert.assertNotNull(tree.find("member2", "member"));
+        Assert.assertNotNull(tree.find("shard04", "shard"));
+        Assert.assertNotNull(tree.find("entity12", "entity"));
+    }
+
+    @Test
+    public void toJson() {
+        String json = testTree().toJson();
+        Assert.assertNotNull(json);
+        System.out.println(json);
+    }
+
     private static HttpServerActor.Tree testTree() {
         return HttpServerActor.Tree.create("cluster", "cluster")
                 .children(
