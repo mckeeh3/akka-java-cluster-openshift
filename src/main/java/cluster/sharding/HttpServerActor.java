@@ -558,10 +558,6 @@ public class HttpServerActor extends AbstractLoggingActor {
             return this;
         }
 
-        void add(String memberId, int shardId, String entityId) {
-            add(memberId, shardId + "", entityId);
-        }
-
         void add(String memberId, String shardId, String entityId) {
             Tree member = find(memberId, "member");
             if (member == null) {

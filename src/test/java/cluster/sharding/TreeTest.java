@@ -44,7 +44,7 @@ public class TreeTest {
     }
 
     @Test
-    public void removeExistingEntityInTree() {
+    public void removeExistingEntityFromTree() {
         HttpServerActor.Tree tree = testTree();
 
         Assert.assertNotNull(tree.find("entity20", "entity"));
@@ -53,7 +53,7 @@ public class TreeTest {
     }
 
     @Test
-    public void removeExistingShardInTree() {
+    public void removeExistingShardFromTree() {
         HttpServerActor.Tree tree = testTree();
 
         Assert.assertNotNull(tree.find("shard05", "shard"));
@@ -63,7 +63,7 @@ public class TreeTest {
     }
 
     @Test
-    public void removeExistingNodeInTree() {
+    public void removeExistingNodeFromTree() {
         HttpServerActor.Tree tree = testTree();
 
         Assert.assertNotNull(tree.find("node3", "node"));

@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 class EntityActor extends AbstractLoggingActor {
     private final ActorRef httpServer;
     private Entity entity;
-    private int shardId;
+    private String shardId;
     private final String member = Cluster.get(context().system()).selfMember().toString();
     private final FiniteDuration receiveTimeout = Duration.create(60, TimeUnit.SECONDS);
 
@@ -31,7 +31,7 @@ class EntityActor extends AbstractLoggingActor {
     private void command(EntityMessage.Command command) {
         if (entity == null) {
             entity = command.entity;
-            shardId = 0; // TODO
+            shardId = EntityMessage.extractShardIdFromCommands(command);
             log().info("initialize {}", entity);
 
             sender().tell(new EntityMessage.CommandAck("initialize", command.entity), self());
