@@ -2,9 +2,12 @@ package cluster.sharding;
 
 import akka.NotUsed;
 import akka.actor.AbstractLoggingActor;
+import akka.actor.ActorSelection;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.cluster.Cluster;
+import akka.cluster.Member;
+import akka.cluster.MemberStatus;
 import akka.http.javadsl.ConnectHttp;
 import akka.http.javadsl.Http;
 import akka.http.javadsl.ServerBinding;
@@ -50,8 +53,24 @@ public class HttpServerActor extends AbstractLoggingActor {
         if (action.action.equals("start")) {
             tree.add(action.member, action.shardId, action.entityId);
         } else if (action.action.equals("stop")) {
-            tree.remove(action.entityId + "", "entity");
+            tree.remove(action.entityId, "entity");
         }
+        forwardActionMessage(action);
+    }
+
+    private void forwardActionMessage(EntityMessage.Action action) {
+        cluster.state().getMembers().forEach(member -> {
+            if (!cluster.selfMember().equals(member) && member.status().equals(MemberStatus.up())) {
+                forwardActionMessage(action, member);
+            }
+        });
+    }
+
+    private void forwardActionMessage(EntityMessage.Action action, Member member) {
+        String path = member.address().toString() + self().path().toStringWithoutAddress();
+        ActorSelection actorSelection = context().actorSelection(path);
+        log().debug("{} -> {}", action, actorSelection);
+        actorSelection.tell(action, self());
     }
 
     @Override
@@ -539,8 +558,8 @@ public class HttpServerActor extends AbstractLoggingActor {
             return this;
         }
 
-        void add(String memberId, int shardId, int entityId) {
-            add(memberId, shardId + "", entityId + "");
+        void add(String memberId, int shardId, String entityId) {
+            add(memberId, shardId + "", entityId);
         }
 
         void add(String memberId, String shardId, String entityId) {

@@ -28,9 +28,8 @@ public class Runner {
                 actorSystem.settings().config().getString("akka.discovery.kubernetes-api.pod-label-selector"));
 
         actorSystem.actorOf(ClusterListenerActor.props(), "clusterListener");
-        actorSystem.actorOf(HttpServerActor.props(), "httpServer");
-
-        ActorRef shardingRegion = setupClusterSharding(actorSystem);
+        ActorRef httpServer = actorSystem.actorOf(HttpServerActor.props(), "httpServer");
+        ActorRef shardingRegion = setupClusterSharding(actorSystem, httpServer);
 
         actorSystem.actorOf(EntityCommandActor.props(shardingRegion), "entityCommand");
         actorSystem.actorOf(EntityQueryActor.props(shardingRegion), "entityQuery");
@@ -59,11 +58,11 @@ public class Runner {
         actorSystem.log().info("Member removed {}", member);
     }
 
-    private static ActorRef setupClusterSharding(ActorSystem actorSystem) {
+    private static ActorRef setupClusterSharding(ActorSystem actorSystem, ActorRef httpServer) {
         ClusterShardingSettings settings = ClusterShardingSettings.create(actorSystem);
         return ClusterSharding.get(actorSystem).start(
                 "entity",
-                EntityActor.props(),
+                EntityActor.props(httpServer),
                 settings,
                 EntityMessage.messageExtractor()
         );

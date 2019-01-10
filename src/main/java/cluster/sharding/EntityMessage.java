@@ -75,10 +75,10 @@ class EntityMessage {
     static class Action implements Serializable {
         final String member;
         final int shardId;
-        final int entityId;
+        final String entityId;
         final String action;
 
-        Action(String member, int shardId, int entityId, String action) {
+        Action(String member, int shardId, String entityId, String action) {
             this.member = member;
             this.shardId = shardId;
             this.entityId = entityId;
@@ -87,7 +87,7 @@ class EntityMessage {
 
         @Override
         public String toString() {
-            return String.format("%s[%s, %d, %d, %s]", getClass().getSimpleName(), member, shardId, entityId, action);
+            return String.format("%s[%s, %d, %s, %s]", getClass().getSimpleName(), member, shardId, entityId, action);
         }
     }
 
@@ -111,7 +111,7 @@ class EntityMessage {
     }
 
     static String extractShardIdFromCommands(Object message) {
-        int numberOfShards = 100;
+        int numberOfShards = 15;
 
         if (message instanceof Command) {
             return ((Command) message).entity.id.id.hashCode() % numberOfShards + "";

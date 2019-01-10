@@ -1,9 +1,7 @@
 package cluster.sharding;
 
-import akka.actor.AbstractLoggingActor;
-import akka.actor.PoisonPill;
-import akka.actor.Props;
-import akka.actor.ReceiveTimeout;
+import akka.actor.*;
+import akka.cluster.Cluster;
 import akka.cluster.sharding.ShardRegion;
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
@@ -11,8 +9,15 @@ import scala.concurrent.duration.FiniteDuration;
 import java.util.concurrent.TimeUnit;
 
 class EntityActor extends AbstractLoggingActor {
+    private final ActorRef httpServer;
     private Entity entity;
+    private int shardId;
+    private final String member = Cluster.get(context().system()).selfMember().toString();
     private final FiniteDuration receiveTimeout = Duration.create(60, TimeUnit.SECONDS);
+
+    EntityActor(ActorRef httpServer) {
+        this.httpServer = httpServer;
+    }
 
     @Override
     public Receive createReceive() {
@@ -26,8 +31,11 @@ class EntityActor extends AbstractLoggingActor {
     private void command(EntityMessage.Command command) {
         if (entity == null) {
             entity = command.entity;
+            shardId = 0; // TODO
             log().info("initialize {}", entity);
+
             sender().tell(new EntityMessage.CommandAck("initialize", command.entity), self());
+            notifyStart();
         } else {
             log().info("update {} {} -> {}", entity.id, command.entity.value, entity.value);
             entity.value = command.entity.value;
@@ -44,6 +52,16 @@ class EntityActor extends AbstractLoggingActor {
         }
     }
 
+    private void notifyStart() {
+        EntityMessage.Action start = new EntityMessage.Action(member, shardId, entity.id.id, "start");
+        httpServer.tell(start, self());
+    }
+
+    private void notiftStop() {
+        EntityMessage.Action stop = new EntityMessage.Action(member, shardId, entity.id.id, "stop");
+        httpServer.tell(stop, self());
+    }
+
     private void passivate() {
         context().parent().tell(new ShardRegion.Passivate(PoisonPill.getInstance()), self());
     }
@@ -56,10 +74,11 @@ class EntityActor extends AbstractLoggingActor {
 
     @Override
     public void postStop() {
+        notiftStop();
         log().info("Stop {}", entity == null ? "(not initialized)" : entity.id);
     }
 
-    static Props props() {
-        return Props.create(EntityActor.class);
+    static Props props(ActorRef httpServer) {
+        return Props.create(EntityActor.class, httpServer);
     }
 }
