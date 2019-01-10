@@ -25,14 +25,14 @@ public class TreeTest {
     public void findExistingNodeInTree() {
         HttpServerActor.Tree tree = testTree();
 
-        Assert.assertNotNull(tree.find("node3", "node"));
+        Assert.assertNotNull(tree.find("member3", "member"));
     }
 
     @Test
     public void treeNonExistingNodeNotInTree() {
         HttpServerActor.Tree tree = testTree();
 
-        Assert.assertNull(tree.find("x", "node"));
+        Assert.assertNull(tree.find("x", "member"));
     }
 
     @Test
@@ -66,9 +66,9 @@ public class TreeTest {
     public void removeExistingNodeFromTree() {
         HttpServerActor.Tree tree = testTree();
 
-        Assert.assertNotNull(tree.find("node3", "node"));
-        Assert.assertNotNull(tree.remove("node3", "node"));
-        Assert.assertNull(tree.find("node3", "node"));
+        Assert.assertNotNull(tree.find("member3", "member"));
+        Assert.assertNotNull(tree.remove("member3", "member"));
+        Assert.assertNull(tree.find("member3", "member"));
         Assert.assertNull(tree.find("shard08", "shard"));
         Assert.assertNull(tree.find("entity26", "entity"));
     }
@@ -107,6 +107,36 @@ public class TreeTest {
     }
 
     @Test
+    public void t() {
+        HttpServerActor.Tree tree = testTree();
+
+        //tree.remove("entity01", "entity");
+        tree.remove("entity02", "entity");
+        tree.remove("entity03", "entity");
+        tree.remove("entity04", "entity");
+        tree.remove("entity05", "entity");
+        tree.remove("entity06", "entity");
+        tree.remove("entity07", "entity");
+        tree.remove("entity08", "entity");
+        tree.remove("entity09", "entity");
+
+        System.out.println(tree.toJson());
+
+        tree.add("member5", "shard01", "entity01");
+        tree.add("member5", "shard01", "entity02");
+        tree.add("member5", "shard01", "entity03");
+        tree.add("member5", "shard02", "entity04");
+        tree.add("member5", "shard02", "entity05");
+        tree.add("member5", "shard02", "entity06");
+        tree.add("member5", "shard03", "entity07");
+        tree.add("member5", "shard03", "entity08");
+        tree.add("member5", "shard03", "entity09");
+
+        System.out.println(tree.toJson());
+        System.out.println();
+    }
+
+    @Test
     public void toJson() {
         String json = testTree().toJson();
         Assert.assertNotNull(json);
@@ -116,7 +146,7 @@ public class TreeTest {
     private static HttpServerActor.Tree testTree() {
         return HttpServerActor.Tree.create("cluster", "cluster")
                 .children(
-                        HttpServerActor.Tree.create("node1", "node")
+                        HttpServerActor.Tree.create("member1", "member")
                                 .children(
                                         HttpServerActor.Tree.create("shard01", "shard")
                                                 .children(
@@ -137,7 +167,7 @@ public class TreeTest {
                                                         HttpServerActor.Tree.create("entity09", "entity")
                                                 )
                                 ),
-                        HttpServerActor.Tree.create("node2", "node")
+                        HttpServerActor.Tree.create("member2", "member")
                                 .children(
                                         HttpServerActor.Tree.create("shard04", "shard")
                                                 .children(
@@ -158,7 +188,7 @@ public class TreeTest {
                                                         HttpServerActor.Tree.create("entity18", "entity")
                                                 )
                                 ),
-                        HttpServerActor.Tree.create("node3", "node")
+                        HttpServerActor.Tree.create("member3", "member")
                                 .children(
                                         HttpServerActor.Tree.create("shard07", "shard")
                                                 .children(
@@ -179,7 +209,7 @@ public class TreeTest {
                                                         HttpServerActor.Tree.create("entity27", "entity")
                                                 )
                                 ),
-                        HttpServerActor.Tree.create("node4", "node")
+                        HttpServerActor.Tree.create("member4", "member")
                                 .children(
                                         HttpServerActor.Tree.create("shard10", "shard")
                                                 .children(

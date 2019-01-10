@@ -77,17 +77,23 @@ class EntityMessage {
         final String shardId;
         final String entityId;
         final String action;
+        final boolean forward;
 
-        Action(String member, String shardId, String entityId, String action) {
+        Action(String member, String shardId, String entityId, String action, boolean forward) {
             this.member = member;
             this.shardId = shardId;
             this.entityId = entityId;
             this.action = action;
+            this.forward = forward;
+        }
+
+        Action asNoForward() {
+            return new Action(member, shardId, entityId, action, false);
         }
 
         @Override
         public String toString() {
-            return String.format("%s[%s, %s, %s, %s]", getClass().getSimpleName(), member, shardId, entityId, action);
+            return String.format("%s[%s, %s, %s, %s, %b]", getClass().getSimpleName(), member, shardId, entityId, action, forward);
         }
     }
 

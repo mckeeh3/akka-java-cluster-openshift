@@ -12,7 +12,7 @@ class EntityActor extends AbstractLoggingActor {
     private final ActorRef httpServer;
     private Entity entity;
     private String shardId;
-    private final String member = Cluster.get(context().system()).selfMember().toString();
+    private final String member = Cluster.get(context().system()).selfMember().address().toString();
     private final FiniteDuration receiveTimeout = Duration.create(60, TimeUnit.SECONDS);
 
     EntityActor(ActorRef httpServer) {
@@ -53,12 +53,12 @@ class EntityActor extends AbstractLoggingActor {
     }
 
     private void notifyStart() {
-        EntityMessage.Action start = new EntityMessage.Action(member, shardId, entity.id.id, "start");
+        EntityMessage.Action start = new EntityMessage.Action(member, shardId, entity.id.id, "start", true);
         httpServer.tell(start, self());
     }
 
     private void notiftStop() {
-        EntityMessage.Action stop = new EntityMessage.Action(member, shardId, entity.id.id, "stop");
+        EntityMessage.Action stop = new EntityMessage.Action(member, shardId, entity.id.id, "stop", true);
         httpServer.tell(stop, self());
     }
 

@@ -1,10 +1,7 @@
 package cluster.sharding;
 
 import akka.NotUsed;
-import akka.actor.AbstractLoggingActor;
-import akka.actor.ActorSelection;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
+import akka.actor.*;
 import akka.cluster.Cluster;
 import akka.cluster.Member;
 import akka.cluster.MemberStatus;
@@ -50,6 +47,7 @@ public class HttpServerActor extends AbstractLoggingActor {
     }
 
     private void entityMessage(EntityMessage.Action action) {
+        log().info("{} <-- {}", action, sender());
         if (action.action.equals("start")) {
             tree.add(action.member, action.shardId, action.entityId);
         } else if (action.action.equals("stop")) {
@@ -59,11 +57,13 @@ public class HttpServerActor extends AbstractLoggingActor {
     }
 
     private void forwardActionMessage(EntityMessage.Action action) {
-        cluster.state().getMembers().forEach(member -> {
-            if (!cluster.selfMember().equals(member) && member.status().equals(MemberStatus.up())) {
-                forwardActionMessage(action, member);
-            }
-        });
+        if (action.forward) {
+            cluster.state().getMembers().forEach(member -> {
+                if (!cluster.selfMember().equals(member) && member.status().equals(MemberStatus.up())) {
+                    forwardActionMessage(action.asNoForward(), member);
+                }
+            });
+        }
     }
 
     private void forwardActionMessage(EntityMessage.Action action, Member member) {
@@ -127,9 +127,9 @@ public class HttpServerActor extends AbstractLoggingActor {
 
         line(html, "<!DOCTYPE html>");
         line(html, "<html>");
-        line(html, "  <head>");
-        line(html, "    <meta http-equiv='Content-Type' content='text/html;charset=utf-8'>");
-        line(html, "    <style type='text/css'>");
+        line(html, "<head>");
+        line(html, "  <meta http-equiv='Content-Type' content='text/html;charset=utf-8'>");
+        line(html, "  <style type='text/css'>");
         line(html, "");
         line(html, "circle.node {");
         line(html, "  cursor: pointer;");
@@ -145,11 +145,11 @@ public class HttpServerActor extends AbstractLoggingActor {
         line(html, "");
         line(html, "body {");
         line(html, "  font: 300 36px 'Helvetica Neue';");
-        line(html, "  height: 640px;");
+        line(html, "  height: 900px;");
         line(html, "  margin: 80px 160px 80px 160px;");
         line(html, "  overflow: hidden;");
         line(html, "  position: relative;");
-        line(html, "  width: 960px;");
+        line(html, "  width: 1400px;");
         line(html, "}");
         line(html, "");
         line(html, "a:link, a:visited {");
@@ -245,16 +245,16 @@ public class HttpServerActor extends AbstractLoggingActor {
         line(html, "}");
         line(html, "");
         line(html, "    </style>");
-        line(html, "  </head>");
-        line(html, "  <body>");
-        line(html, "    <h2>");
-        line(html, "      Akka OpenShift cluster<br>");
-        line(html, "      force-directed graph");
-        line(html, "    </h2>");
-        line(html, "    <script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.js'></script>");
-        line(html, "    <script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.geom.js'></script>");
-        line(html, "    <script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.layout.js'></script>");
-        line(html, "    <script type='text/javascript'>");
+        line(html, "</head>");
+        line(html, "<body>");
+        line(html, "<h2>");
+        line(html, "  Akka OpenShift cluster<br>");
+        line(html, "  force-directed graph");
+        line(html, "</h2>");
+        line(html, "<script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.js'></script>");
+        line(html, "<script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.geom.js'></script>");
+        line(html, "<script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.layout.js'></script>");
+        line(html, "<script type='text/javascript'>");
         line(html, "");
         line(html, "var webSocket = new WebSocket('ws://' + location.host + '/events');");
         line(html, "");
@@ -265,6 +265,8 @@ public class HttpServerActor extends AbstractLoggingActor {
         line(html, "");
         line(html, "webSocket.onmessage = function(event) {");
         line(html, "  console.log(event);");
+        line(html, "  root = JSON.parse(event.data);");
+        line(html, "  update();");
         line(html, "}");
         line(html, "");
         line(html, "webSocket.onerror = function(error) {");
@@ -275,8 +277,13 @@ public class HttpServerActor extends AbstractLoggingActor {
         line(html, "  console.log('WebSocket close', event);");
         line(html, "}");
         line(html, "");
-        line(html, "var w = 1280,");
-        line(html, "    h = 800,");
+        line(html, "setInterval(sendWebSocketRequest, 15000);");
+        line(html, "function sendWebSocketRequest() {");
+        line(html, "    webSocket.send('request');");
+        line(html, "}");
+        line(html, "");
+        line(html, "var w = 1600,");
+        line(html, "    h = 1200,");
         line(html, "    node,");
         line(html, "    link,");
         line(html, "    root;");
@@ -284,10 +291,10 @@ public class HttpServerActor extends AbstractLoggingActor {
         line(html, "var force = d3.layout.force()");
         line(html, "    .on('tick', tick)");
         line(html, "    .charge(function(d) {");
-        line(html, "        return d._children ? -d.size / 100 : -300;");
+        line(html, "        return d._children ? -d.size / 100 : -600;");
         line(html, "    })");
         line(html, "    .linkDistance(function(d) {");
-        line(html, "        return d.target._children ? 80 : 50;");
+        line(html, "        return d.target._children ? 100 : 75;");
         line(html, "    })");
         line(html, "    .size([w, h - 100]);");
         line(html, "");
@@ -399,7 +406,8 @@ public class HttpServerActor extends AbstractLoggingActor {
         line(html, "");
         line(html, "  function recurse(node) {");
         line(html, "    if (node.children) node.size = node.children.reduce(function(p, v) { return p + recurse(v); }, 0);");
-        line(html, "    if (!node.id) node.id = ++i;");
+        line(html, "//    if (!node.id) node.id = ++i;");
+        line(html, "    if (!node.id) node.id = node.name;");
         line(html, "    nodes.push(node);");
         line(html, "    return node.size;");
         line(html, "  }");
@@ -407,95 +415,8 @@ public class HttpServerActor extends AbstractLoggingActor {
         line(html, "  root.size = recurse(root);");
         line(html, "  return nodes;");
         line(html, "}");
-        line(html, "");
-        line(html, "function root() {");
-        line(html, "    return {");
-        line(html, "        'name' : 'cluster',");
-        line(html, "        'type' : 'cluster',");
-        line(html, "        'children' : [");
-        line(html, "            {");
-        line(html, "                'name' : 'member1',");
-        line(html, "                'type' : 'member',");
-        line(html, "                'children' : [");
-        line(html, "                    {");
-        line(html, "                        'name' : 'shard1',");
-        line(html, "                        'type' : 'shard',");
-        line(html, "                        'children' : [");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 }");
-        line(html, "                        ]");
-        line(html, "                    },");
-        line(html, "                    {");
-        line(html, "                        'name' : 'shard2',");
-        line(html, "                        'type' : 'shard',");
-        line(html, "                        'children' : [");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 }");
-        line(html, "                        ]");
-        line(html, "                    },");
-        line(html, "                ]");
-        line(html, "            },");
-        line(html, "            {");
-        line(html, "                'name' : 'member1',");
-        line(html, "                'type' : 'member',");
-        line(html, "                'children' : [");
-        line(html, "                    {");
-        line(html, "                        'name' : 'shard1',");
-        line(html, "                        'type' : 'shard',");
-        line(html, "                        'children' : [");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 }");
-        line(html, "                        ]");
-        line(html, "                    },");
-        line(html, "                    {");
-        line(html, "                        'name' : 'shard2',");
-        line(html, "                        'type' : 'shard',");
-        line(html, "                        'children' : [");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 }");
-        line(html, "                        ]");
-        line(html, "                    },");
-        line(html, "                ]");
-        line(html, "            },");
-        line(html, "            {");
-        line(html, "                'name' : 'member1',");
-        line(html, "                'type' : 'member',");
-        line(html, "                'children' : [");
-        line(html, "                    {");
-        line(html, "                        'name' : 'shard1',");
-        line(html, "                        'type' : 'shard',");
-        line(html, "                        'children' : [");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 }");
-        line(html, "                        ]");
-        line(html, "                    },");
-        line(html, "                    {");
-        line(html, "                        'name' : 'shard2',");
-        line(html, "                        'type' : 'shard',");
-        line(html, "                        'children' : [");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 },");
-        line(html, "                            { 'name' : 'entity1', 'type' : 'entity', 'size' : 1000 }");
-        line(html, "                        ]");
-        line(html, "                    },");
-        line(html, "                ]");
-        line(html, "            },");
-        line(html, "        ]");
-        line(html, "    }");
-        line(html, "}");
         line(html, "    </script>");
-        line(html, "  </body>");
+        line(html, "</body>");
         line(html, "</html>");
 
         return html.toString();
@@ -526,8 +447,8 @@ public class HttpServerActor extends AbstractLoggingActor {
     }
 
     private Message getTreeAsJson() {
-        //return TextMessage.create(tree.toJson());
-        return TextMessage.create(testTree().toJson());
+        return TextMessage.create(tree.toJson());
+        //return TextMessage.create(testTree().toJson());
     }
 
     @Override
@@ -564,12 +485,12 @@ public class HttpServerActor extends AbstractLoggingActor {
                 member = Tree.create(memberId, "member");
                 children.add(member);
             }
-            Tree shard = find(shardId, "shard");
+            Tree shard = member.find(shardId, "shard");
             if (shard == null) {
                 shard = Tree.create(shardId, "shard");
                 member.children.add(shard);
             }
-            Tree entity = find(entityId, "entity");
+            Tree entity = shard.find(entityId, "entity");
             if (entity == null) {
                 entity = Tree.create(entityId, "entity");
                 shard.children.add(entity);

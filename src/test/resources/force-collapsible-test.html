@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta http-equiv='Content-Type' content='text/html;charset=utf-8'>
-  <style type='text/css'>
+  <head>
+    <meta http-equiv='Content-Type' content='text/html;charset=utf-8'>
+    <style type='text/css'>
 
 circle.node {
   cursor: pointer;
@@ -118,18 +118,18 @@ body > svg {
 }
 
     </style>
-</head>
-<body>
-<h2>
-  Akka OpenShift cluster<br>
-  force-directed graph
-</h2>
-<script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.js'></script>
-<script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.geom.js'></script>
-<script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.layout.js'></script>
-<script type='text/javascript'>
+  </head>
+  <body>
+    <h2>
+      Akka OpenShift cluster<br>
+      force-directed graph
+    </h2>
+    <script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.js'></script>
+    <script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.geom.js'></script>
+    <script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.layout.js'></script>
+    <script type='text/javascript'>
 
-var webSocket = new WebSocket('ws://' + location.host + '/events');
+var webSocket = new WebSocket('ws://192.168.64.3:31884/events');
 
 webSocket.onopen = function(event) {
   webSocket.send('request')
@@ -289,5 +289,5 @@ function flatten(root) {
   return nodes;
 }
     </script>
-</body>
+  </body>
 </html>
