@@ -12,6 +12,7 @@ class EntityActor extends AbstractLoggingActor {
     private final ActorRef httpServer;
     private Entity entity;
     private String shardId;
+    private String entityId;
     private final String member = Cluster.get(context().system()).selfMember().address().toString();
     private final FiniteDuration receiveTimeout = Duration.create(60, TimeUnit.SECONDS);
 
@@ -31,6 +32,7 @@ class EntityActor extends AbstractLoggingActor {
     private void command(EntityMessage.Command command) {
         if (entity == null) {
             entity = command.entity;
+            entityId = entity.id.id;
             shardId = EntityMessage.extractShardIdFromCommands(command);
             log().info("initialize {}", entity);
 
@@ -44,6 +46,8 @@ class EntityActor extends AbstractLoggingActor {
     }
 
     private void query(EntityMessage.Query query) {
+        entityId = query.id.id;
+        shardId = EntityMessage.extractShardIdFromCommands(query);
         log().info("query {} -> {}", query, entity == null ? "(not initialized)" : entity);
         if (entity == null) {
             sender().tell(new EntityMessage.QueryAckNotFound(query.id), self());
@@ -53,12 +57,12 @@ class EntityActor extends AbstractLoggingActor {
     }
 
     private void notifyStart() {
-        EntityMessage.Action start = new EntityMessage.Action(member, shardId, entity.id.id, "start", true);
+        EntityMessage.Action start = new EntityMessage.Action(member, shardId, entityId, "start", true);
         httpServer.tell(start, self());
     }
 
-    private void notiftStop() {
-        EntityMessage.Action stop = new EntityMessage.Action(member, shardId, entity.id.id, "stop", true);
+    private void notifyStop() {
+        EntityMessage.Action stop = new EntityMessage.Action(member, shardId, entityId, "stop", true);
         httpServer.tell(stop, self());
     }
 
@@ -74,8 +78,8 @@ class EntityActor extends AbstractLoggingActor {
 
     @Override
     public void postStop() {
-        notiftStop();
-        log().info("Stop {}", entity == null ? "(not initialized)" : entity.id);
+        notifyStop();
+        log().info("Stop shard {}, entity {}", shardId, entityId);
     }
 
     static Props props(ActorRef httpServer) {

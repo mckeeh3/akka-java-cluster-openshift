@@ -44,36 +44,6 @@ public class TreeTest {
     }
 
     @Test
-    public void removeExistingEntityFromTree() {
-        HttpServerActor.Tree tree = testTree();
-
-        Assert.assertNotNull(tree.find("entity20", "entity"));
-        Assert.assertNotNull(tree.remove("entity20", "entity"));
-        Assert.assertNull(tree.find("entity20", "entity"));
-    }
-
-    @Test
-    public void removeExistingShardFromTree() {
-        HttpServerActor.Tree tree = testTree();
-
-        Assert.assertNotNull(tree.find("shard05", "shard"));
-        Assert.assertNotNull(tree.remove("shard05", "shard"));
-        Assert.assertNull(tree.find("shard05", "shard"));
-        Assert.assertNull(tree.find("entity14", "entity"));
-    }
-
-    @Test
-    public void removeExistingNodeFromTree() {
-        HttpServerActor.Tree tree = testTree();
-
-        Assert.assertNotNull(tree.find("member3", "member"));
-        Assert.assertNotNull(tree.remove("member3", "member"));
-        Assert.assertNull(tree.find("member3", "member"));
-        Assert.assertNull(tree.find("shard08", "shard"));
-        Assert.assertNull(tree.find("entity26", "entity"));
-    }
-
-    @Test
     public void addToEmptyTree() {
         HttpServerActor.Tree tree = new HttpServerActor.Tree("cluster", "cluster");
 
@@ -107,33 +77,67 @@ public class TreeTest {
     }
 
     @Test
-    public void t() {
+    public void removeByMemberShardEntityWorksForExistingEntity() {
         HttpServerActor.Tree tree = testTree();
 
-        //tree.remove("entity01", "entity");
-        tree.remove("entity02", "entity");
-        tree.remove("entity03", "entity");
-        tree.remove("entity04", "entity");
-        tree.remove("entity05", "entity");
-        tree.remove("entity06", "entity");
-        tree.remove("entity07", "entity");
-        tree.remove("entity08", "entity");
-        tree.remove("entity09", "entity");
+        tree.remove("member1", "shard01", "entity01");
 
-        System.out.println(tree.toJson());
+        Assert.assertNull(tree.find("entity01", "entity"));
+        Assert.assertNotNull(tree.find("shard01", "shard"));
+        Assert.assertNotNull(tree.find("member1", "member"));
 
-        tree.add("member5", "shard01", "entity01");
-        tree.add("member5", "shard01", "entity02");
-        tree.add("member5", "shard01", "entity03");
-        tree.add("member5", "shard02", "entity04");
-        tree.add("member5", "shard02", "entity05");
-        tree.add("member5", "shard02", "entity06");
-        tree.add("member5", "shard03", "entity07");
-        tree.add("member5", "shard03", "entity08");
-        tree.add("member5", "shard03", "entity09");
+        tree.remove("member1", "shard01", "entity02");
+        tree.remove("member1", "shard01", "entity03");
 
-        System.out.println(tree.toJson());
-        System.out.println();
+        Assert.assertNull(tree.find("entity02", "entity"));
+        Assert.assertNull(tree.find("entity03", "entity"));
+        Assert.assertNull(tree.find("shard01", "shard"));
+        Assert.assertNotNull(tree.find("member1", "member"));
+
+        tree.remove("member1", "shard02", "entity04");
+        tree.remove("member1", "shard02", "entity05");
+        tree.remove("member1", "shard02", "entity06");
+
+        Assert.assertNull(tree.find("entity04", "entity"));
+        Assert.assertNull(tree.find("entity05", "entity"));
+        Assert.assertNull(tree.find("entity06", "entity"));
+        Assert.assertNull(tree.find("shard02", "shard"));
+        Assert.assertNotNull(tree.find("member1", "member"));
+
+        tree.remove("member1", "shard03", "entity07");
+        tree.remove("member1", "shard03", "entity08");
+        tree.remove("member1", "shard03", "entity09");
+
+        Assert.assertNull(tree.find("entity04", "entity"));
+        Assert.assertNull(tree.find("entity05", "entity"));
+        Assert.assertNull(tree.find("entity06", "entity"));
+        Assert.assertNull(tree.find("shard02", "shard"));
+        Assert.assertNull(tree.find("member1", "member"));
+    }
+
+    @Test
+    public void removeEntityRemovesMultipleEntities() {
+        HttpServerActor.Tree cluster = HttpServerActor.Tree.create("cluster", "cluster");
+        cluster.add("member1", "shard1", "entity1");
+        cluster.add("member1", "shard2", "entity1");
+        cluster.add("member2", "shard2", "entity1");
+
+        Assert.assertNotNull(cluster.find("entity1", "entity"));
+
+        cluster.removeEntity("entity1");
+
+        Assert.assertNull(cluster.find("entity1", "entity"));
+    }
+
+    @Test
+    public void removeEntityRemovesDuplicateEntities() {
+        HttpServerActor.Tree cluster = HttpServerActor.Tree.create("cluster", "cluster");
+        cluster.add("member1", "shard1", "entity1");
+        cluster.add("member1", "shard1", "entity1");
+
+        cluster.removeEntity("entity1");
+
+        Assert.assertNull(cluster.find("entity1", "entity"));
     }
 
     @Test

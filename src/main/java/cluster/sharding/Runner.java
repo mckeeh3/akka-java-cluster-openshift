@@ -24,8 +24,6 @@ public class Runner {
         startClusterBootstrap(actorSystem);
 
         actorSystem.log().info("Started actor system '{}', member {}", actorSystem, actorSystem.provider().getDefaultAddress());
-        actorSystem.log().info("akka.discovery.kubernetes-api.pod-label-selector '{}'",
-                actorSystem.settings().config().getString("akka.discovery.kubernetes-api.pod-label-selector"));
 
         actorSystem.actorOf(ClusterListenerActor.props(), "clusterListener");
         ActorRef httpServer = actorSystem.actorOf(HttpServerActor.props(), "httpServer");

@@ -1,17 +1,17 @@
 package cluster.sharding;
 
 import akka.NotUsed;
-import akka.actor.*;
+import akka.actor.AbstractLoggingActor;
+import akka.actor.ActorSelection;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.Member;
 import akka.cluster.MemberStatus;
 import akka.http.javadsl.ConnectHttp;
 import akka.http.javadsl.Http;
 import akka.http.javadsl.ServerBinding;
-import akka.http.javadsl.model.ContentTypes;
-import akka.http.javadsl.model.HttpRequest;
-import akka.http.javadsl.model.HttpResponse;
-import akka.http.javadsl.model.StatusCodes;
+import akka.http.javadsl.model.*;
 import akka.http.javadsl.model.ws.Message;
 import akka.http.javadsl.model.ws.TextMessage;
 import akka.http.javadsl.model.ws.WebSocket;
@@ -22,7 +22,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 
-import java.io.Serializable;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -51,7 +51,7 @@ public class HttpServerActor extends AbstractLoggingActor {
         if (action.action.equals("start")) {
             tree.add(action.member, action.shardId, action.entityId);
         } else if (action.action.equals("stop")) {
-            tree.remove(action.entityId, "entity");
+            tree.remove(action.member, action.shardId, action.entityId);
         }
         forwardActionMessage(action);
     }
@@ -97,11 +97,18 @@ public class HttpServerActor extends AbstractLoggingActor {
     }
 
     private HttpResponse handleHttpRequest(HttpRequest httpRequest) {
+        log().info("HTTP request '{}", httpRequest.getUri().path());
         switch (httpRequest.getUri().path()) {
             case "/":
                 return getWebPage();
-            case "/monitor":
-                return getWebPage();
+            case "/home":
+                return htmlFileResponse("force-collapsible.html");
+            case "/d3/d3.js":
+                return jsFileResponse("d3/d3.js");
+            case "/d3/d3.geom.js":
+                return jsFileResponse("d3/d3.geom.js");
+            case "/d3/d3.layout.js":
+                return jsFileResponse("d3/d3.layout.js");
             case "/events":
                 return webSocketHandler(httpRequest);
             default:
@@ -109,10 +116,51 @@ public class HttpServerActor extends AbstractLoggingActor {
         }
     }
 
+    private HttpResponse htmlFileResponse(String filename) {
+        try {
+            String fileContents = readFile(filename);
+            return HttpResponse.create()
+                    .withEntity(ContentTypes.TEXT_HTML_UTF8, fileContents)
+                    .withStatus(StatusCodes.ACCEPTED);
+        } catch (IOException e) {
+            log().error(e, String.format("I/O error on file '%s'", filename));
+            return HttpResponse.create().withStatus(StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     private HttpResponse getWebPage() {
         return HttpResponse.create()
                 .withEntity(ContentTypes.TEXT_HTML_UTF8, monitorWebPage())
                 .withStatus(StatusCodes.ACCEPTED);
+    }
+
+    private HttpResponse jsFileResponse(String filename) {
+        try {
+            String fileContents = readFile(filename);
+            return HttpResponse.create()
+                    .withEntity(ContentTypes.create(MediaTypes.APPLICATION_JAVASCRIPT, HttpCharsets.UTF_8), fileContents)
+                    .withStatus(StatusCodes.ACCEPTED);
+        } catch (IOException e) {
+            log().error(e, String.format("I/O error on file '%s'", filename));
+            return HttpResponse.create().withStatus(StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private String readFile(String filename) throws IOException {
+        InputStream inputStream = getClass().getClassLoader().getResourceAsStream(filename);
+        if (inputStream == null) {
+            throw new FileNotFoundException(String.format("Filename '%s'", filename));
+        } else {
+            StringBuilder fileContents = new StringBuilder();
+
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(inputStream))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    fileContents.append(String.format("%s%n", line));
+                }
+            }
+            return fileContents.toString();
+        }
     }
 
     /**
@@ -448,7 +496,6 @@ public class HttpServerActor extends AbstractLoggingActor {
 
     private Message getTreeAsJson() {
         return TextMessage.create(tree.toJson());
-        //return TextMessage.create(testTree().toJson());
     }
 
     @Override
@@ -480,6 +527,7 @@ public class HttpServerActor extends AbstractLoggingActor {
         }
 
         void add(String memberId, String shardId, String entityId) {
+            removeEntity(entityId);
             Tree member = find(memberId, "member");
             if (member == null) {
                 member = Tree.create(memberId, "member");
@@ -497,27 +545,57 @@ public class HttpServerActor extends AbstractLoggingActor {
             }
         }
 
-        Tree find(String name, String type) {
-            if (this.name.equals(name) && this.type.equals(type)) {
-                return this;
-            } else {
-                for (Tree child : children) {
-                    Tree found = child.find(name, type);
-                    if (found != null) {
-                        return found;
+        void remove(String memberId, String shardId, String entityId) {
+            Tree member = find(memberId, "member");
+            if (member != null) {
+                Tree shard = member.find(shardId, "shard");
+                if (shard != null) {
+                    Tree entity = shard.find(entityId, "entity");
+                    shard.children.remove(entity);
+
+                    if (shard.children.isEmpty()) {
+                        member.children.remove(shard);
+                    }
+                }
+                if (member.children.isEmpty()) {
+                    children.remove(member);
+                }
+            }
+        }
+
+        void removeEntity(String entityId) {
+            for (Tree member : children) {
+                for (Tree shard : member.children) {
+                    for (Tree entity : shard.children) {
+                        if (entity.name.equals(entityId)) {
+                            shard.children.remove(entity);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        Tree find(String memberId, String shardId, String entityId) {
+            Tree member = find(memberId, "member");
+            if (member != null) {
+                Tree shard = member.find(shardId, "shard");
+                if (shard != null) {
+                    Tree entity = shard.find(entityId, "entity");
+                    if (entity != null) {
+                        return entity;
                     }
                 }
             }
             return null;
         }
 
-        Tree remove(String name, String type) {
-            for (Tree child : children) {
-                if (child.name.equals(name) && child.type.equals(type)) {
-                    children.remove(child);
-                    return child;
-                } else {
-                    Tree found = child.remove(name, type);
+        Tree find(String name, String type) {
+            if (this.name.equals(name) && this.type.equals(type)) {
+                return this;
+            } else {
+                for (Tree child : children) {
+                    Tree found = child.find(name, type);
                     if (found != null) {
                         return found;
                     }
@@ -539,95 +617,5 @@ public class HttpServerActor extends AbstractLoggingActor {
         public String toString() {
             return String.format("%s[%s, %s]", getClass().getSimpleName(), name, type);
         }
-    }
-
-    private static Tree testTree() {
-        return Tree.create("cluster", "cluster")
-                .children(
-                        Tree.create("node1", "node")
-                                .children(
-                                        Tree.create("shard01", "shard")
-                                                .children(
-                                                        Tree.create("entity01", "entity"),
-                                                        Tree.create("entity02", "entity"),
-                                                        Tree.create("entity03", "entity")
-                                                ),
-                                        Tree.create("shard02", "shard")
-                                                .children(
-                                                        Tree.create("entity04", "entity"),
-                                                        Tree.create("entity05", "entity"),
-                                                        Tree.create("entity06", "entity")
-                                                ),
-                                        Tree.create("shard03", "shard")
-                                                .children(
-                                                        Tree.create("entity07", "entity"),
-                                                        Tree.create("entity08", "entity"),
-                                                        Tree.create("entity09", "entity")
-                                                )
-                                ),
-                        Tree.create("node2", "node")
-                                .children(
-                                        Tree.create("shard04", "shard")
-                                                .children(
-                                                        Tree.create("entity10", "entity"),
-                                                        Tree.create("entity11", "entity"),
-                                                        Tree.create("entity12", "entity")
-                                                ),
-                                        Tree.create("shard05", "shard")
-                                                .children(
-                                                        Tree.create("entity13", "entity"),
-                                                        Tree.create("entity14", "entity"),
-                                                        Tree.create("entity15", "entity")
-                                                ),
-                                        Tree.create("shard06", "shard")
-                                                .children(
-                                                        Tree.create("entity16", "entity"),
-                                                        Tree.create("entity17", "entity"),
-                                                        Tree.create("entity18", "entity")
-                                                )
-                                ),
-                        Tree.create("node3", "node")
-                                .children(
-                                        Tree.create("shard07", "shard")
-                                                .children(
-                                                        Tree.create("entity19", "entity"),
-                                                        Tree.create("entity20", "entity"),
-                                                        Tree.create("entity21", "entity")
-                                                ),
-                                        Tree.create("shard08", "shard")
-                                                .children(
-                                                        Tree.create("entity22", "entity"),
-                                                        Tree.create("entity23", "entity"),
-                                                        Tree.create("entity24", "entity")
-                                                ),
-                                        Tree.create("shard09", "shard")
-                                                .children(
-                                                        Tree.create("entity25", "entity"),
-                                                        Tree.create("entity26", "entity"),
-                                                        Tree.create("entity27", "entity")
-                                                )
-                                ),
-                        Tree.create("node4", "node")
-                                .children(
-                                        Tree.create("shard10", "shard")
-                                                .children(
-                                                        Tree.create("entity28", "entity"),
-                                                        Tree.create("entity29", "entity"),
-                                                        Tree.create("entity30", "entity")
-                                                ),
-                                        Tree.create("shard11", "shard")
-                                                .children(
-                                                        Tree.create("entity31", "entity"),
-                                                        Tree.create("entity32", "entity"),
-                                                        Tree.create("entity33", "entity")
-                                                ),
-                                        Tree.create("shard12", "shard")
-                                                .children(
-                                                        Tree.create("entity34", "entity"),
-                                                        Tree.create("entity35", "entity"),
-                                                        Tree.create("entity36", "entity")
-                                                )
-                                )
-                );
     }
 }
