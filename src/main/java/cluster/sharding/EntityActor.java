@@ -32,11 +32,11 @@ class EntityActor extends AbstractLoggingActor {
     private void command(EntityMessage.Command command) {
         if (entity == null) {
             entity = command.entity;
-            entityId = entity.id.id;
-            shardId = EntityMessage.extractShardIdFromCommands(command);
             log().info("initialize {}", entity);
 
             sender().tell(new EntityMessage.CommandAck("initialize", command.entity), self());
+            entityId = entity.id.id;
+            shardId = EntityMessage.extractShardIdFromCommands(command);
             notifyStart();
         } else {
             log().info("update {} {} -> {}", entity.id, command.entity.value, entity.value);
@@ -46,11 +46,12 @@ class EntityActor extends AbstractLoggingActor {
     }
 
     private void query(EntityMessage.Query query) {
-        entityId = query.id.id;
-        shardId = EntityMessage.extractShardIdFromCommands(query);
         log().info("query {} -> {}", query, entity == null ? "(not initialized)" : entity);
         if (entity == null) {
             sender().tell(new EntityMessage.QueryAckNotFound(query.id), self());
+            entityId = query.id.id;
+            shardId = EntityMessage.extractShardIdFromCommands(query);
+            notifyStart();
         } else {
             sender().tell(new EntityMessage.QueryAck(entity), self());
         }
