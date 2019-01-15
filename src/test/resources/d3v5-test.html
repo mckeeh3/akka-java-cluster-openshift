@@ -1,239 +1,39 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta http-equiv='Content-Type' content='text/html;charset=utf-8'>
-    <style type='text/css'>
+<meta charset='utf-8'>
+<style>
 
-circle.node {
-  cursor: pointer;
-  stroke: #000;
-  stroke-width: .5px;
-}
-
-line.link {
-  fill: none;
+.links line {
   stroke: #9ecae1;
   stroke-width: 1.5px;
 }
 
-body {
-  font: 300 36px 'Helvetica Neue';
-  height: 900px;
-  margin: 80px 160px 80px 160px;
-  overflow: hidden;
-  position: relative;
-  width: 1400px;
+.nodes circle {
+  stroke: #fff;
+  stroke-width: 1.5px;
 }
 
-a:link, a:visited {
-  color: #777;
-  text-decoration: none;
+text {
+  font-family: sans-serif;
+  font-size: 10px;
 }
 
-a:hover {
-  color: #666;
-}
+</style>
+<svg width='1600' height='1000'></svg>
+<script src='https://d3js.org/d3.v4.min.js'></script>
+<script>
 
-blockquote {
-  margin: 0;
-}
-
-blockquote:before {
-  content: '“';
-  position: absolute;
-  left: -.4em;
-}
-
-blockquote:after {
-  content: '”';
-  position: absolute;
-}
-
-body > ul {
-  margin: 0;
-  padding: 0;
-}
-
-h1 {
-  font-size: 64px;
-}
-
-h1, h2, h3 {
-  font-weight: inherit;
-  margin: 0;
-}
-
-h2, h3 {
-  text-align: right;
-  font-size: inherit;
-  position: absolute;
-  bottom: 0;
-  right: 0;
-}
-
-h2 {
-  font-size: 24px;
-  position: absolute;
-}
-
-h3 {
-  bottom: -20px;
-  font-size: 18px;
-}
-
-.invert {
-  background: #1f1f1f;
-  color: #dcdccc;
-}
-
-.invert h2, .invert h3 {
-  color: #7f9f7f;
-}
-
-.string, .regexp {
-  color: #f39;
-}
-
-.keyword {
-  color: #00c;
-}
-
-.comment {
-  color: #777;
-  font-style: oblique;
-}
-
-.number {
-  color: #369;
-}
-
-.class, .special {
-  color: #1181B8;
-}
-
-body > svg {
-  position: absolute;
-  top: -80px;
-  left: -160px;
-}
-
-    </style>
-  </head>
-  <body>
-    <h2>
-      Akka OpenShift cluster<br>
-      force-directed graph
-    </h2>
-    <script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.js'></script>
-    <script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.geom.js'></script>
-    <script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.layout.js'></script>
-    <script type='text/javascript'>
-
-var webSocket = new WebSocket('ws://' + location.host + '/events');
-
-webSocket.onopen = function(event) {
-  webSocket.send('request')
-  console.log('WebSocket connected', event)
-}
-
-webSocket.onmessage = function(event) {
-  console.log(event);
-}
-
-webSocket.onerror = function(error) {
-  console.error('WebSocket error', error);
-}
-
-webSocket.onclose = function(event) {
-  console.log('WebSocket close', event);
-}
-
-var w = 1600,
-    h = 1200,
-    node,
-    link,
-    root;
-
-var force = d3.layout.force()
-    .on('tick', tick)
-    .charge(function(d) {
-        return d._children ? -d.size / 100 : -600;
-    })
-    .linkDistance(function(d) {
-        return d.target._children ? 100 : 75;
-    })
-    .size([w, h - 100]);
-
-var vis = d3.select('body').append('svg:svg')
-    .attr('width', w)
-    .attr('height', h);
-
-// root = root();
-// root.fixed = true;
-// root.x = w / 2;
-// root.y = h / 2 - 80;
-// update();
-
-function update() {
-  var nodes = flatten(root),
-      links = d3.layout.tree().links(nodes);
-
-  force
-      .nodes(nodes)
-      .links(links)
-      .start();
-
-  link = vis.selectAll('line.link')
-      .data(links, function(d) { return d.target.id; });
-
-  link.enter().insert('svg:line', '.node')
-      .attr('class', 'link')
-      .attr('x1', function(d) { return d.source.x; })
-      .attr('y1', function(d) { return d.source.y; })
-      .attr('x2', function(d) { return d.target.x; })
-      .attr('y2', function(d) { return d.target.y; });
-
-  link.exit().remove();
-
-  node = vis.selectAll('circle.node')
-      .data(nodes, function(d) { return d.id; })
-      .style('fill', color);
-
-  node.transition()
-      .attr('r', radius);
-
-  node.enter().append('svg:circle')
-      .attr('class', function(d) { return d.type ? 'node ' + d.type : 'node'; })
-      .attr('cx', function(d) { return d.x; })
-      .attr('cy', function(d) { return d.y; })
-      .attr('r', radius)
-      .style('fill', color)
-      .on('click', click)
-      .call(force.drag);
-
-  node.exit().remove();
-}
-
-function tick() {
-  link.attr('x1', function(d) { return d.source.x; })
-      .attr('y1', function(d) { return d.source.y; })
-      .attr('x2', function(d) { return d.target.x; })
-      .attr('y2', function(d) { return d.target.y; });
-
-  node.attr('cx', function(d) { return d.x; })
-      .attr('cy', function(d) { return d.y; });
-}
+var svg = d3.select('svg'),
+    width = +svg.attr('width'),
+    height = +svg.attr('height');
 
 function color(d) {
-    if (d._children) {
-        return '#3182bd';
-    } else if (d.type == 'cluster') {
+    if (d.data.type == 'cluster') {
         return '#B30000';
-    } else if (d.type == 'member') {
+    } else if (d.data.type == 'member') {
         return '#F17D00';
-    } else if (d.type == 'shard') {
+    } else if (d.data.type == 'shard') {
         return '#00C000';
-    } else if (d.type == 'entity') {
+    } else if (d.data.type == 'entity') {
         return '#046E97';
     } else {
         return '#fd8d3c';
@@ -241,45 +41,126 @@ function color(d) {
 }
 
 function radius(d) {
-    if (d._children) {
-        return Math.sqrt(d.size) / 10;
-    } else if (d.type == 'cluster') {
+    if (d.data.type == 'cluster') {
         return 6;
-    } else if (d.type == 'member') {
+    } else if (d.data.type == 'member') {
         return 20;
-    } else if (d.type == 'shard') {
+    } else if (d.data.type == 'shard') {
         return 10;
-    } else if (d.type == 'entity') {
-        return 5;
+    } else if (d.data.type == 'entity') {
+        return 6;
     } else {
         return 4.5;
     }
 }
 
-function click(d) {
-  if (d.children) {
-    d._children = d.children;
-    d.children = null;
-  } else {
-    d.children = d._children;
-    d._children = null;
-  }
-  update();
+function textX(d) {
+    if (d.data.type == 'cluster') {
+        return 8;
+    } else if (d.data.type == 'member') {
+        return 22;
+    } else if (d.data.type == 'shard') {
+        return 12;
+    } else if (d.data.type == 'entity') {
+        return 8;
+    } else {
+        return 10;
+    }
 }
 
-function flatten(root) {
-  var nodes = [], i = 0;
+var forceManyBody = function() {
+  var f = d3.forceManyBody();
+  f.strength(function() { return -200; });
+  return f;
+}
 
-  function recurse(node) {
-    if (node.children) node.size = node.children.reduce(function(p, v) { return p + recurse(v); }, 0);
-//    if (!node.id) node.id = ++i;
-    if (!node.id) node.id = node.name;
-    nodes.push(node);
-    return node.size;
+var update = function(graph) {
+  d3.selectAll('.links').remove();
+  d3.selectAll('.nodes').remove();
+
+  var simulation = d3.forceSimulation()
+      .force('link', d3.forceLink())
+      .force('charge', forceManyBody())
+      .force('center', d3.forceCenter(width / 2, height / 2));
+
+  var link = svg.append('g')
+      .attr('class', 'links')
+    .selectAll('line')
+    .data(graph.links)
+    .enter().append('line');
+
+  var node = svg.append('g')
+      .attr('class', 'nodes')
+    .selectAll('g')
+    .data(graph.nodes)
+    .enter().append('g');
+
+  var circles = node.append('circle')
+      .attr('r', function(d) { return radius(d); })
+      .attr('fill', function(d) { return color(d); })
+      .call(d3.drag()
+          .on('start', dragstarted)
+          .on('drag', dragged)
+          .on('end', dragended));
+
+  var labels = node.append('text')
+      .text(function(d) { return d.data.name; })
+      .attr('x', function(d) { return textX(d); })
+      .attr('y', 3);
+
+  node.append('title')
+      .text(function(d) { return d.id; });
+
+  simulation
+      .nodes(graph.nodes)
+      .on('tick', ticked)
+      .on('end', function() {
+        node;
+      });
+
+  simulation.force('link')
+      .links(graph.links);
+
+  function ticked() {
+    link
+        .attr('x1', function(d) { return d.source.x; })
+        .attr('y1', function(d) { return d.source.y; })
+        .attr('x2', function(d) { return d.target.x; })
+        .attr('y2', function(d) { return d.target.y; });
+
+    node
+        .attr('transform', function(d) {
+          return 'translate(' + d.x + ',' + d.y + ')';
+        })
   }
+}
 
-  root.size = recurse(root);
-  return nodes;
+var graph = function(root) {
+  var hierarchy = d3.hierarchy(root);
+
+  return {
+    nodes: hierarchy.descendants(),
+    links: hierarchy.links()
+  }
+}
+
+update(graph(root()));
+
+function dragstarted(d) {
+  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x;
+  d.fy = d.y;
+}
+
+function dragged(d) {
+  d.fx = d3.event.x;
+  d.fy = d3.event.y;
+}
+
+function dragended(d) {
+  if (!d3.event.active) simulation.alphaTarget(0);
+  d.fx = null;
+  d.fy = null;
 }
 
 function root() {
@@ -372,8 +253,7 @@ function root() {
 setTimeout(updateRoot2, 15000);
 
 function updateRoot2() {
-    root = root2();
-    update();
+    update(graph(root2()));
 }
 
 function root2() {
@@ -468,8 +348,7 @@ function root2() {
 setTimeout(updateRoot3, 30000);
 
 function updateRoot3() {
-    root = root3();
-    update();
+    update(graph(root3()));
 }
 
 function root3() {
@@ -570,6 +449,5 @@ function root3() {
         ]
     }
 }
-    </script>
-  </body>
-</html>
+
+</script>
