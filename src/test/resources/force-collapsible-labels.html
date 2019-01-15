@@ -176,14 +176,14 @@ function update() {
       .style('stroke', '#FFF')
       .style('stroke-width', 3);
 
-  node.append('text')
+  node.append('svg:text')
       .text(function(d) {
         return d.name;
       })
       .classed('label', true)
       .attr('transform', 'translate(' + 10 +',' + 3 + ')');
 
-  node.append('title')
+  node.append('svg:title')
       .text(function(d) { return d.name; });
 
   node.call(force.drag);
@@ -349,7 +349,7 @@ function root() {
     }
 }
 
-//setTimeout(updateRoot2, 15000);
+setTimeout(updateRoot2, 15000);
 
 function updateRoot2() {
     root = root2();
@@ -445,7 +445,7 @@ function root2() {
     }
 }
 
-//setTimeout(updateRoot3, 30000);
+setTimeout(updateRoot3, 30000);
 
 function updateRoot3() {
     root = root3();

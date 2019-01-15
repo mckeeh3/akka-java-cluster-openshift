@@ -42,11 +42,11 @@ public class HttpServerActor extends AbstractLoggingActor {
     @Override
     public Receive createReceive() {
         return receiveBuilder()
-                .match(EntityMessage.Action.class, this::entityMessage)
+                .match(EntityMessage.Action.class, this::actionMessage)
                 .build();
     }
 
-    private void entityMessage(EntityMessage.Action action) {
+    private void actionMessage(EntityMessage.Action action) {
         log().info("{} <-- {}", action, sender());
         if (action.action.equals("start")) {
             tree.add(action.member, action.shardId, action.entityId);
