@@ -56,19 +56,10 @@ h3 {
   font-size: 18px;
 }
 
-
 text {
   font-family: sans-serif;
-  font-size: 10px;
-  display: block;
-  transform-origin: 0px 0px;
-  white-space: nowrap;
-}
-
-
-.label {
-  fill: black;
-  display: inline;
+  font-size: 12px;
+  fill: #999;
 }
 
 body > svg {
@@ -114,29 +105,34 @@ var w = 1600,
     link,
     root;
 
-var force = d3.layout.force()
-    .on('tick', tick)
-    .charge(function(d) {
-        return d._children ? -d.size / 100 : -900;
-    })
-    .linkDistance(function(d) {
-        return d.target._children ? 100 : 100;
-    })
-    .size([w, h - 100]);
+// hack to get around problem with building g (group) child tags: circle, text, and title
+function forceInit() {
+  return d3.layout.force()
+      .on('tick', tick)
+      .charge(function(d) {
+          return d._children ? -d.size / 100 : -900;
+      })
+      .linkDistance(function(d) {
+          return d.target._children ? 100 : 100;
+      })
+      .size([w, h - 100]);
+}
 
 var svg = d3.select('body').append('svg:svg')
     .attr('width', w)
     .attr('height', h);
 
 root = root();
-root.fixed = true;
-root.x = w / 2;
-root.y = h / 2 - 80;
 update();
 
 function update() {
+  // hack to get around problem with building g (group) child tags: circle, text, and title
+  d3.selectAll('.link').remove();
+  d3.selectAll('.node').remove();
+
   var nodes = flatten(root),
-      links = d3.layout.tree().links(nodes);
+      links = d3.layout.tree().links(nodes),
+      force = forceInit();
 
   force
       .nodes(nodes)
@@ -163,10 +159,10 @@ function update() {
   node.enter().append('svg:g')
       .attr('class', function(d) { return d.type ? 'node ' + d.type : 'node'; })
       .on('mouseover', function() {
-        d3.select(this).select('text').style('font-size', 12);
+        d3.select(this).select('text').style('font-size', 24).style('fill', '#046E97');
       })
       .on('mouseout', function(d) {
-        d;
+        d3.select(this).select('text').style('font-size', 12).style('fill', '#999');
       });
 
   node.append('svg:circle')
@@ -181,7 +177,9 @@ function update() {
         return d.name;
       })
       .classed('label', true)
-      .attr('transform', 'translate(' + 10 +',' + 3 + ')');
+      .attr('x', labelOffsetX)
+      .attr('y', 3);
+//      .attr('transform', 'translate(' + 10 +',' + 3 + ')');
 
   node.append('svg:title')
       .text(function(d) { return d.name; });
@@ -231,6 +229,22 @@ function radius(d) {
         return 12;
     } else if (d.type == 'entity') {
         return 8;
+    } else {
+        return 4.5;
+    }
+}
+
+function labelOffsetX(d) {
+    if (d._children) {
+        return Math.sqrt(d.size) / 10;
+    } else if (d.type == 'cluster') {
+        return 12;
+    } else if (d.type == 'member') {
+        return 24;
+    } else if (d.type == 'shard') {
+        return 14;
+    } else if (d.type == 'entity') {
+        return 10;
     } else {
         return 4.5;
     }
