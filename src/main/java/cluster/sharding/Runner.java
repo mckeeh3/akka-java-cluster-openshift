@@ -44,11 +44,11 @@ public class Runner {
 
     private static void registerMemberEvents(ActorSystem actorSystem) {
         Cluster cluster = Cluster.get(actorSystem);
-        cluster.registerOnMemberUp(() -> memberUo(actorSystem, cluster.selfMember()));
+        cluster.registerOnMemberUp(() -> memberUp(actorSystem, cluster.selfMember()));
         cluster.registerOnMemberRemoved(() -> memberRemoved(actorSystem, cluster.selfMember()));
     }
 
-    private static void memberUo(ActorSystem actorSystem, Member member) {
+    private static void memberUp(ActorSystem actorSystem, Member member) {
         actorSystem.log().info("Member up {}", member);
     }
 

@@ -177,12 +177,6 @@ var vis = d3.select('body').append('svg:svg')
     .attr('width', w)
     .attr('height', h);
 
-root = root();
-root.fixed = true;
-root.x = w / 2;
-root.y = h / 2 - 80;
-update();
-
 function update() {
   var nodes = flatten(root),
       links = d3.layout.tree().links(nodes);
