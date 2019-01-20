@@ -80,7 +80,8 @@ body > svg {
     <script type='text/javascript' src='http://mbostock.github.io/d3/talk/20111116/d3/d3.layout.js'></script>
     <script type='text/javascript'>
 
-var webSocket = new WebSocket('ws://' + location.host + '/events');
+var locationHost = 'akka-cluster-demo-akka-cluster-1.192.168.64.3.nip.io';
+var webSocket = new WebSocket('ws://' + locationHost + '/events');
 
 webSocket.onopen = function(event) {
   webSocket.send('request')
@@ -89,14 +90,30 @@ webSocket.onopen = function(event) {
 
 webSocket.onmessage = function(event) {
   console.log(event);
+  root = JSON.parse(event.data);
+  update();
 }
 
 webSocket.onerror = function(error) {
   console.error('WebSocket error', error);
+  webSocket = undefined;
 }
 
 webSocket.onclose = function(event) {
   console.log('WebSocket close', event);
+  webSocket = undefined;
+}
+
+var sendWebSocketRequestEnabled = true;
+
+setInterval(sendWebSocketRequest, 15000);
+
+function sendWebSocketRequest() {
+  if (webSocket === undefined) {
+    webSocket = new WebSocket('ws://' + locationHost + '/events');
+  } else if (sendWebSocketRequestEnabled) {
+    webSocket.send('request');
+  }
 }
 
 var w = 1600,
@@ -110,23 +127,20 @@ function forceInit() {
   return d3.layout.force()
       .on('tick', tick)
       .charge(function(d) {
-          return d._children ? -d.size / 100 : -900;
+          return d._children ? -d.size / 100 : -500;
       })
       .linkDistance(function(d) {
           return d.target._children ? 100 : 100;
       })
-      .size([w, h - 100]);
+      .size([w, h - 50]);
 }
 
 var svg = d3.select('body').append('svg:svg')
     .attr('width', w)
     .attr('height', h);
 
-root = root();
-update();
-
 function update() {
-  // hack to get around problem with building g (group) child tags: circle, text, and title
+  // hack to get around problem with building g (group) child tags: circle and text
   d3.selectAll('.link').remove();
   d3.selectAll('.node').remove();
 
@@ -158,6 +172,8 @@ function update() {
 
   node.enter().append('svg:g')
       .attr('class', function(d) { return d.type ? 'node ' + d.type : 'node'; })
+      .on('click', click)
+      .on('dblclick', dblclick)
       .on('mouseover', function() {
         d3.select(this).select('text').style('font-size', 24).style('fill', '#046E97');
       })
@@ -179,10 +195,6 @@ function update() {
       .classed('label', true)
       .attr('x', labelOffsetX)
       .attr('y', 3);
-//      .attr('transform', 'translate(' + 10 +',' + 3 + ')');
-
-  node.append('svg:title')
-      .text(function(d) { return d.name; });
 
   node.call(force.drag);
 
@@ -251,14 +263,11 @@ function labelOffsetX(d) {
 }
 
 function click(d) {
-  if (d.children) {
-    d._children = d.children;
-    d.children = null;
-  } else {
-    d.children = d._children;
-    d._children = null;
-  }
-  update();
+  sendWebSocketRequestEnabled = !sendWebSocketRequestEnabled;
+}
+
+function dblclick(d) {
+  d;
 }
 
 function flatten(root) {
@@ -363,7 +372,7 @@ function root() {
     }
 }
 
-setTimeout(updateRoot2, 15000);
+//setTimeout(updateRoot2, 15000);
 
 function updateRoot2() {
     root = root2();
@@ -459,7 +468,7 @@ function root2() {
     }
 }
 
-setTimeout(updateRoot3, 30000);
+//setTimeout(updateRoot3, 30000);
 
 function updateRoot3() {
     root = root3();
