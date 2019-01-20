@@ -24,6 +24,42 @@ text {
 <script src="https://d3js.org/d3.v5.js"></script>
 <script>
 
+var locationHost = 'akka-cluster-demo-akka-cluster-1.192.168.64.3.nip.io';
+var webSocket = new WebSocket('ws://' + locationHost + '/events');
+
+webSocket.onopen = function(event) {
+  webSocket.send('request')
+  console.log('WebSocket connected', event)
+}
+
+webSocket.onmessage = function(event) {
+  console.log(event);
+  root = JSON.parse(event.data);
+  update(root);
+}
+
+webSocket.onerror = function(error) {
+  console.error('WebSocket error', error);
+  webSocket = undefined;
+}
+
+webSocket.onclose = function(event) {
+  console.log('WebSocket close', event);
+  webSocket = undefined;
+}
+
+var sendWebSocketRequestEnabled = true;
+
+setInterval(sendWebSocketRequest, 5000);
+
+function sendWebSocketRequest() {
+  if (webSocket === undefined) {
+    webSocket = new WebSocket('ws://' + locationHost + '/events');
+  } else if (sendWebSocketRequestEnabled) {
+    webSocket.send('request');
+  }
+}
+
 const width = 1600;
 const height = 1200;
 const radius = height / 2;
@@ -51,26 +87,20 @@ const gNode = g.append('g')
     .attr('stroke-linejoin', 'round')
     .attr('stroke-width', 3);
 
-update((hierarchy1()));
+//update((hierarchy1()));
 
 function update(hierarchy) {
   const root = tree(d3.hierarchy(hierarchy));
 
-  const t = d3.transition()
+  const t1 = d3.transition()
     .duration(500);
+
+  const t2 = d3.transition()
+    .delay(500)
+    .duration(1000);
 
   const link = gLink.selectAll('path')
     .data(root.links(), linkId);
-
-  link.exit()
-    .transition(t)
-    .attr('opacity', 0)
-    .remove();
-
-  link.transition(t)
-    .attr('d', d3.linkRadial()
-    .angle(d => d.x)
-    .radius(d => d.y));
 
   link.enter().append('path')
     .attr('id', d => linkId)
@@ -79,21 +109,29 @@ function update(hierarchy) {
                  .angle(d => d.x)
                  .radius(d => d.y));
 
-  const node = gNode.selectAll('g')
-    .data(root.descendants(), nodeId);
+  link.transition(t2)
+    .attr('d', d3.linkRadial()
+    .angle(d => d.x)
+    .radius(d => d.y));
 
-  node.exit()
-    .transition(t)
-    .attr('opacity', 0)
+  link.exit()
+    .transition(t1)
+    .style('opacity', 0)
     .remove();
 
-  node.transition(t)
-    .attr('transform', d => `rotate(${d.x * 180 / Math.PI - 90}) translate(${d.y},0)`);
+  const node = gNode.selectAll('g')
+    .data(root.descendants(), nodeId);
 
   const nodeEnter = node.enter().append('g')
     .attr('id', nodeId)
     .attr('class', d => 'node ' + d.data.type)
-    .attr('transform', d => `rotate(${d.x * 180 / Math.PI - 90}) translate(${d.y},0)`);
+    .attr('transform', d => `rotate(${d.x * 180 / Math.PI - 90}) translate(${d.y},0)`)
+    .on('mouseover', function() {
+      d3.select(this).select('text').style('font-size', 24).style('fill', '#046E97');
+    })
+    .on('mouseout', function(d) {
+      d3.select(this).select('text').style('font-size', 12).style('fill', '#999');
+    });
 
   nodeEnter.append('circle')
     .attr('fill', circleColor)
@@ -104,11 +142,16 @@ function update(hierarchy) {
     .attr('x', labelOffsetX)
     .attr('text-anchor', d => d.x < Math.PI === !d.children ? 'start' : 'end')
     .attr('transform', d => d.x >= Math.PI ? 'rotate(180)' : null)
-    .on('mouseover',
-      function() { d3.select(this).style('font-size', 24).style('fill', '#046E97'); })
-    .on('mouseout',
-      function(d) { d3.select(this).style('font-size', 12).style('fill', '#999'); })
     .text(d => d.data.name);
+
+  node.transition(t2)
+    .attr('transform', d => `rotate(${d.x * 180 / Math.PI - 90}) translate(${d.y},0)`);
+//    .attr('transform', d => 'rotate(' + (d.x * 180 / Math.PI - 90) + ') translate(' + d.y + ',0)');
+
+  node.exit()
+    .transition(t1)
+    .style('opacity', 0.000001)
+    .remove();
 }
 
 function linkId(d) {
@@ -116,7 +159,7 @@ function linkId(d) {
 }
 
 function nodeId(d) {
-  return d.data.name;
+  return d.data.type + '-' + d.data.name;
 }
 
 function circleColor(d) {
@@ -249,7 +292,7 @@ function hierarchy1() {
     }
 }
 
-setTimeout(update2, 5000);
+//setTimeout(update2, 5000);
 
 function update2() {
   update(hierarchy2());
@@ -352,7 +395,7 @@ function hierarchy2() {
     }
 }
 
-setTimeout(update3, 10000);
+//setTimeout(update3, 10000);
 
 function update3() {
   update(hierarchy3());
@@ -461,7 +504,7 @@ function hierarchy3() {
     }
 }
 
-setTimeout(update4, 15000);
+//setTimeout(update4, 15000);
 
 function update4() {
   update(hierarchy4());
