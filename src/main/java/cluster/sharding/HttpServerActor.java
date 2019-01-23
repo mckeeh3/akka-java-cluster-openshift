@@ -100,7 +100,13 @@ public class HttpServerActor extends AbstractLoggingActor {
         log().info("HTTP request '{}", httpRequest.getUri().path());
         switch (httpRequest.getUri().path()) {
             case "/":
-                return htmlFileResponse("force-collapsible.html");
+                return htmlFileResponse("monitor.html");
+            case "/d3/d3.v5.js":
+                return jsFileResponse("d3/d3.v5.js");
+            case "/monitor2":
+                return htmlFileResponse("monitor2.html");
+            case "/monitor3":
+                return htmlFileResponse("monitor3.html");
             case "/d3/d3.js":
                 return jsFileResponse("d3/d3.js");
             case "/d3/d3.geom.js":

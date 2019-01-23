@@ -14,7 +14,7 @@ class EntityActor extends AbstractLoggingActor {
     private String shardId;
     private String entityId;
     private final String member = Cluster.get(context().system()).selfMember().address().toString();
-    private final FiniteDuration receiveTimeout = Duration.create(60, TimeUnit.SECONDS);
+    private final FiniteDuration receiveTimeout = Duration.create(15, TimeUnit.SECONDS);
 
     EntityActor(ActorRef httpServer) {
         this.httpServer = httpServer;

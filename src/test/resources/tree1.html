@@ -25,38 +25,34 @@ text {
 <script>
 
 var locationHost = 'akka-cluster-demo-akka-cluster-1.192.168.64.3.nip.io';
-var webSocket = new WebSocket('ws://' + locationHost + '/events');
-
-webSocket.onopen = function(event) {
-  webSocket.send('request')
-  console.log('WebSocket connected', event)
-}
-
-webSocket.onmessage = function(event) {
-  console.log(event);
-  root = JSON.parse(event.data);
-  update(root);
-}
-
-webSocket.onerror = function(error) {
-  console.error('WebSocket error', error);
-  webSocket = undefined;
-}
-
-webSocket.onclose = function(event) {
-  console.log('WebSocket close', event);
-  webSocket = undefined;
-}
+var webSocket;
 
 var sendWebSocketRequestEnabled = true;
 
-setInterval(sendWebSocketRequest, 5000);
-
 function sendWebSocketRequest() {
-  if (webSocket === undefined) {
-    webSocket = new WebSocket('ws://' + locationHost + '/events');
-  } else if (sendWebSocketRequestEnabled) {
+  if (webSocket && webSocket.readyState == WebSocket.OPEN) {
     webSocket.send('request');
+  } else {
+    webSocket = new WebSocket('ws://' + locationHost + '/events');
+    update({ 'name': 'cluster', 'type': 'cluster' });
+
+    webSocket.onopen = function(event) {
+      console.log('WebSocket connected', event)
+    }
+
+    webSocket.onmessage = function(event) {
+      console.log(event);
+      root = JSON.parse(event.data);
+      update(root);
+    }
+
+    webSocket.onerror = function(error) {
+      console.error('WebSocket error', error);
+    }
+
+    webSocket.onclose = function(event) {
+      console.log('WebSocket close', event);
+    }
   }
 }
 
@@ -88,23 +84,30 @@ const gNode = g.append('g')
     .attr('stroke-width', 3);
 
 //update((hierarchy1()));
+sendWebSocketRequest();
+setInterval(sendWebSocketRequest, 5000);
 
 function update(hierarchy) {
-  const root = tree(d3.hierarchy(hierarchy));
-
   const t1 = d3.transition()
-    .duration(500);
+    .duration(1000);
 
   const t2 = d3.transition()
-    .delay(500)
+    .delay(1000)
+    .duration(2000);
+
+  const t3 = d3.transition()
+    .delay(3000)
     .duration(1000);
+
+  const root = tree(d3.hierarchy(hierarchy));
 
   const link = gLink.selectAll('path')
     .data(root.links(), linkId);
 
-  link.enter().append('path')
+  const linkEnter = link.enter().append('path')
     .attr('id', d => linkId)
     .attr('class', d => 'link ' + d.source.data.type)
+    .attr('opacity', 0.000001)
     .attr('d', d3.linkRadial()
                  .angle(d => d.x)
                  .radius(d => d.y));
@@ -113,6 +116,9 @@ function update(hierarchy) {
     .attr('d', d3.linkRadial()
     .angle(d => d.x)
     .radius(d => d.y));
+
+  linkEnter.transition(t3)
+    .style('opacity', 1.0);
 
   link.exit()
     .transition(t1)
@@ -134,24 +140,37 @@ function update(hierarchy) {
     });
 
   nodeEnter.append('circle')
+    .attr('class', d => d.data.type)
     .attr('fill', circleColor)
-    .attr('r', circleRadius);
+    .attr('r', circleRadius)
+    .attr('opacity', 0.000001);
 
   nodeEnter.append('text')
     .attr('dy', '0.31em')
     .attr('x', labelOffsetX)
     .attr('text-anchor', d => d.x < Math.PI === !d.children ? 'start' : 'end')
     .attr('transform', d => d.x >= Math.PI ? 'rotate(180)' : null)
+    .attr('opacity', 0.1)
     .text(d => d.data.name);
 
-  node.transition(t2)
-    .attr('transform', d => `rotate(${d.x * 180 / Math.PI - 90}) translate(${d.y},0)`);
-//    .attr('transform', d => 'rotate(' + (d.x * 180 / Math.PI - 90) + ') translate(' + d.y + ',0)');
+  node.exit()
+    .transition(t1)
+    .select('circle').style('r', circleRadiusExit).style('fill', 'red');
 
   node.exit()
     .transition(t1)
     .style('opacity', 0.000001)
     .remove();
+
+  node.transition(t2)
+    .attr('transform', d => `rotate(${d.x * 180 / Math.PI - 90}) translate(${d.y},0)`)
+    .select('circle.entity').style('fill', '#42aaff');
+
+  nodeEnter.transition(t3)
+    .select('text').style('opacity', 1.0);
+
+  nodeEnter.transition(t3)
+    .select('circle').style('opacity', 1.0);
 }
 
 function linkId(d) {
@@ -188,6 +207,10 @@ function circleRadius(d) {
     } else {
         return 3;
     }
+}
+
+function circleRadiusExit(d) {
+    return 2 * circleRadius(d);
 }
 
 function labelOffsetX(d) {

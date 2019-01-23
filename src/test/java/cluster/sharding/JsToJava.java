@@ -4,7 +4,7 @@ import java.io.*;
 
 public class JsToJava {
     public static void main(String[] args) throws IOException {
-        String filename = "force-collapsible.html";
+        String filename = "monitor2.html";
         InputStream inputStream = JsToJava.class.getClassLoader().getResourceAsStream(filename);
         if (inputStream == null) {
             throw new FileNotFoundException(String.format("Filename '%s'", filename));

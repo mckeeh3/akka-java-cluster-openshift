@@ -64,9 +64,20 @@ class ClusterListenerActor extends AbstractLoggingActor {
     }
 
     private void logClusterMembers(CurrentClusterState currentClusterState) {
+        Member oldest = cluster.selfMember();
+        for (Member member : currentClusterState.getMembers()) {
+            if (member.isOlderThan(oldest)) {
+                oldest = member;
+            }
+        }
+
         int count = 0;
         for (Member member : currentClusterState.getMembers()) {
-            log().info(" {} {}", ++count, member);
+            if (member.equals(oldest)) {
+                log().info(" {} (OLDEST) {}", ++count, member);
+            } else {
+                log().info(" {} {}", ++count, member);
+            }
         }
     }
 
