@@ -86,15 +86,15 @@ setInterval(sendWebSocketRequest, 5000);
 
 function update(hierarchy) {
   const t1 = d3.transition()
-    .duration(500);
+    .duration(750);
 
   const t2 = d3.transition()
-    .delay(500)
-    .duration(500);
+    .delay(750)
+    .duration(750);
 
   const t3 = d3.transition()
-    .delay(1000)
-    .duration(500);
+    .delay(1500)
+    .duration(750);
 
   const root = tree(d3.hierarchy(hierarchy));
 
@@ -104,12 +104,13 @@ function update(hierarchy) {
   const linkEnter = link.enter().append('path')
     .attr('id', d => linkId)
     .attr('class', d => 'link ' + d.source.data.type)
-    .attr('opacity', 0.000001)
+    .style('opacity', 0.000001)
     .attr('d', d3.linkRadial()
                  .angle(d => d.x)
                  .radius(d => d.y));
 
   link.transition(t2)
+    .style('opacity', 1.0)
     .attr('d', d3.linkRadial()
     .angle(d => d.x)
     .radius(d => d.y));
@@ -119,7 +120,7 @@ function update(hierarchy) {
 
   link.exit()
     .transition(t1)
-    .style('opacity', 0)
+    .style('opacity', 0.000001)
     .remove();
 
   const node = gNode.selectAll('g')
@@ -140,34 +141,50 @@ function update(hierarchy) {
     .attr('class', d => d.data.type)
     .attr('fill', circleColor)
     .attr('r', circleRadius)
-    .attr('opacity', 0.000001);
+    .style('opacity', 0.000001);
 
   nodeEnter.append('text')
     .attr('dy', '0.31em')
     .attr('x', labelOffsetX)
     .attr('text-anchor', d => d.x < Math.PI === !d.children ? 'start' : 'end')
     .attr('transform', d => d.x >= Math.PI ? 'rotate(180)' : null)
-    .attr('opacity', 0.1)
-    .text(d => d.data.name);
-
-  node.exit()
-    .transition(t1)
-    .select('circle').style('r', circleRadiusExit).style('fill', 'red');
-
-  node.exit()
-    .transition(t1)
     .style('opacity', 0.000001)
-    .remove();
+    .text(d => d.data.name);
 
   node.transition(t2)
     .attr('transform', d => `rotate(${d.x * 180 / Math.PI - 90}) translate(${d.y},0)`)
-    .select('circle.entity').style('fill', '#42aaff');
+    .select('circle.entity')
+      .attr('r', circleRadius)
+      .style('fill', '#42aaff')
+      .style('opacity', 1.0);
+
+  node.transition(t2)
+    .select('text')
+      .style('opacity', 1.0);
 
   nodeEnter.transition(t3)
-    .select('text').style('opacity', 1.0);
+    .select('circle')
+      .style('opacity', 1.0);
 
   nodeEnter.transition(t3)
-    .select('circle').style('opacity', 1.0);
+    .select('text')
+      .style('opacity', 1.0);
+
+  node.exit()
+    .transition(t1)
+    .select('circle')
+      .attr('r', circleRadiusExit)
+      .style('opacity', 0.000001)
+      .style('fill', 'red');
+
+  node.exit()
+    .transition(t1)
+    .select('text')
+      .style('opacity', 0.000001);
+
+  node.exit()
+    .transition(t1)
+    .remove();
 }
 
 function linkId(d) {
@@ -207,7 +224,7 @@ function circleRadius(d) {
 }
 
 function circleRadiusExit(d) {
-    return 2 * circleRadius(d);
+    return 4 * circleRadius(d);
 }
 
 function labelOffsetX(d) {
