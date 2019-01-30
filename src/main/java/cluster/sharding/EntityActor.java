@@ -2,6 +2,7 @@ package cluster.sharding;
 
 import akka.actor.*;
 import akka.cluster.Cluster;
+import akka.cluster.Member;
 import akka.cluster.sharding.ShardRegion;
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
@@ -13,7 +14,7 @@ class EntityActor extends AbstractLoggingActor {
     private Entity entity;
     private String shardId;
     private String entityId;
-    private final String member = Cluster.get(context().system()).selfMember().address().toString();
+    private final String memberId = Cluster.get(context().system()).selfMember().address().toString();
     private final FiniteDuration receiveTimeout = Duration.create(15, TimeUnit.SECONDS);
 
     EntityActor(ActorRef httpServer) {
@@ -58,12 +59,12 @@ class EntityActor extends AbstractLoggingActor {
     }
 
     private void notifyStart() {
-        EntityMessage.Action start = new EntityMessage.Action(member, shardId, entityId, "start", true);
+        EntityMessage.Action start = new EntityMessage.Action(memberId, shardId, entityId, "start", true);
         httpServer.tell(start, self());
     }
 
     private void notifyStop() {
-        EntityMessage.Action stop = new EntityMessage.Action(member, shardId, entityId, "stop", true);
+        EntityMessage.Action stop = new EntityMessage.Action(memberId, shardId, entityId, "stop", true);
         httpServer.tell(stop, self());
     }
 

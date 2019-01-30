@@ -1,13 +1,13 @@
 package cluster.sharding;
 
 import akka.Done;
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.CoordinatedShutdown;
+import akka.actor.*;
 import akka.cluster.Cluster;
 import akka.cluster.Member;
 import akka.cluster.sharding.ClusterSharding;
 import akka.cluster.sharding.ClusterShardingSettings;
+import akka.cluster.singleton.ClusterSingletonManager;
+import akka.cluster.singleton.ClusterSingletonManagerSettings;
 import akka.management.AkkaManagement;
 import akka.management.cluster.bootstrap.ClusterBootstrap;
 
@@ -28,6 +28,7 @@ public class Runner {
         actorSystem.actorOf(ClusterListenerActor.props(), "clusterListener");
         ActorRef httpServer = actorSystem.actorOf(HttpServerActor.props(), "httpServer");
         ActorRef shardingRegion = setupClusterSharding(actorSystem, httpServer);
+        createClusterSingletonManagerActor(actorSystem, httpServer);
 
         actorSystem.actorOf(EntityCommandActor.props(shardingRegion), "entityCommand");
         actorSystem.actorOf(EntityQueryActor.props(shardingRegion), "entityQuery");
@@ -64,6 +65,16 @@ public class Runner {
                 settings,
                 EntityMessage.messageExtractor()
         );
+    }
+
+    private static void createClusterSingletonManagerActor(ActorSystem actorSystem, ActorRef httpServer) {
+        Props clusterSingletonManagerProps = ClusterSingletonManager.props(
+                ClusterSingletonActor.props(httpServer),
+                PoisonPill.getInstance(),
+                ClusterSingletonManagerSettings.create(actorSystem)
+        );
+
+        actorSystem.actorOf(clusterSingletonManagerProps, "clusterSingletonManager");
     }
 
     private static void addCoordinatedShutdownTask(ActorSystem actorSystem, String coordindateShutdownPhase) {

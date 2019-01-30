@@ -141,6 +141,39 @@ public class TreeTest {
     }
 
     @Test
+    public void setUnsetSingletonWorks() {
+        HttpServerActor.Tree tree = testTree();
+        tree.setSingleton("member2");
+        HttpServerActor.Tree member2 = tree.find("member2", "member singleton");
+        Assert.assertNotNull(member2);
+
+        tree.unsetSingleton("member2");
+        member2 = tree.find("member2", "member");
+        Assert.assertNotNull(member2);
+
+        tree = HttpServerActor.Tree.create("cluster", "cluster");
+        tree.setSingleton("member1");
+        tree.add("member1", "1", "1");
+        Assert.assertNotNull(tree.find("member1", "member"));
+        Assert.assertNotNull(tree.find("member1", "singleton"));
+        Assert.assertNotNull(tree.find("member1", "member singleton"));
+
+        tree.add("member1", "1", "2");
+        Assert.assertNotNull(tree.find("member1", "member"));
+        Assert.assertNotNull(tree.find("member1", "singleton"));
+        Assert.assertNotNull(tree.find("member1", "member singleton"));
+
+        tree.add("member2", "2", "3");
+        Assert.assertNotNull(tree.find("member1", "member"));
+        Assert.assertNotNull(tree.find("member1", "singleton"));
+        Assert.assertNotNull(tree.find("member1", "member singleton"));
+
+        Assert.assertNotNull(tree.find("member2", "member"));
+        Assert.assertNull(tree.find("member2", "singleton"));
+        Assert.assertNull(tree.find("member2", "member singleton"));
+    }
+
+    @Test
     public void toJson() {
         String json = testTree().toJson();
         Assert.assertNotNull(json);

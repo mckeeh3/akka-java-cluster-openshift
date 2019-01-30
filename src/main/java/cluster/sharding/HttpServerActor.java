@@ -42,34 +42,47 @@ public class HttpServerActor extends AbstractLoggingActor {
     @Override
     public Receive createReceive() {
         return receiveBuilder()
-                .match(EntityMessage.Action.class, this::actionMessage)
+                .match(EntityMessage.Action.class, this::actionEntity)
+                .match(ClusterSingletonActor.Action.class, this::actionSingleton)
                 .build();
     }
 
-    private void actionMessage(EntityMessage.Action action) {
-        log().info("{} <-- {}", action, sender());
+    private void actionEntity(EntityMessage.Action action) {
+        log().info("Entity {} <-- {}", action, sender());
         if (action.action.equals("start")) {
             tree.add(action.member, action.shardId, action.entityId);
         } else if (action.action.equals("stop")) {
             tree.remove(action.member, action.shardId, action.entityId);
         }
-        forwardActionMessage(action);
-    }
-
-    private void forwardActionMessage(EntityMessage.Action action) {
         if (action.forward) {
-            cluster.state().getMembers().forEach(member -> {
-                if (!cluster.selfMember().equals(member) && member.status().equals(MemberStatus.up())) {
-                    forwardActionMessage(action.asNoForward(), member);
-                }
-            });
+            forwardAction(action.asNoForward());
         }
     }
 
-    private void forwardActionMessage(EntityMessage.Action action, Member member) {
+    private void actionSingleton(ClusterSingletonActor.Action action) {
+        log().info("Singleton {} <-- {}", action, sender());
+        if (action.action.equals("start")) {
+            tree.setSingleton(action.member);
+        } else if (action.action.equals("stop")) {
+            tree.unsetSingleton(action.member);
+        }
+        if (action.forward) {
+            forwardAction(action.asNoForward());
+        }
+    }
+
+    private void forwardAction(Object action) {
+        cluster.state().getMembers().forEach(member -> {
+            if (!cluster.selfMember().equals(member) && member.status().equals(MemberStatus.up())) {
+                forwardAction(action, member);
+            }
+        });
+    }
+
+    private void forwardAction(Object action, Member member) {
         String path = member.address().toString() + self().path().toStringWithoutAddress();
         ActorSelection actorSelection = context().actorSelection(path);
-        log().debug("{} -> {}", action, actorSelection);
+        log().debug("{} --> {}", action, actorSelection);
         actorSelection.tell(action, self());
     }
 
@@ -196,7 +209,7 @@ public class HttpServerActor extends AbstractLoggingActor {
 
     public static class Tree implements Serializable {
         public final String name;
-        public final String type;
+        public String type;
         public final List<Tree> children = new ArrayList<>();
 
         public Tree(String name, String type) {
@@ -278,7 +291,7 @@ public class HttpServerActor extends AbstractLoggingActor {
         }
 
         Tree find(String name, String type) {
-            if (this.name.equals(name) && this.type.equals(type)) {
+            if (this.name.equals(name) && this.type.contains(type)) {
                 return this;
             } else {
                 for (Tree child : children) {
@@ -289,6 +302,28 @@ public class HttpServerActor extends AbstractLoggingActor {
                 }
             }
             return null;
+        }
+
+        void setSingleton(String memberId) {
+            children.forEach(child -> {
+                if (child.name.equals(memberId)) {
+                    child.type = "member singleton";
+                } else if (child.type.equals("member singleton")) {
+                    child.type = "member";
+                }
+            });
+            Tree member = find(memberId, "member singleton");
+            if (member == null) {
+                member = Tree.create(memberId, "member singleton");
+                children.add(member);
+            }
+        }
+
+        void unsetSingleton(String memberId) {
+            Tree member = find(memberId, "member singleton");
+            if (member != null) {
+                member.type = "member";
+            }
         }
 
         String toJson() {

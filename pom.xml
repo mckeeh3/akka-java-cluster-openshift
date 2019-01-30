@@ -11,7 +11,7 @@
     <properties>
         <java.version>8</java.version>
         <scala.version>2.12</scala.version>
-        <akka.version>2.5.19</akka.version>
+        <akka.version>2.5.20</akka.version>
         <akka.http.version>10.1.7</akka.http.version>
         <akka.cluster.bootstrap.version>0.20.0</akka.cluster.bootstrap.version>
         <docker.image.version>1.0.2</docker.image.version>

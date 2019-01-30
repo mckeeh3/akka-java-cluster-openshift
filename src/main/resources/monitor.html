@@ -196,30 +196,35 @@ function nodeId(d) {
 }
 
 function circleColor(d) {
-    if (d.data.type == 'cluster') {
-        return '#B30000';
-    } else if (d.data.type == 'member') {
-        return '#F17D00';
-    } else if (d.data.type == 'shard') {
-        return '#00C000';
-    } else if (d.data.type == 'entity') {
-        return '#046E97';
-    } else {
-        return 'red';
+    switch(d.data.type) {
+        case 'cluster':
+            return '#B30000';
+        case 'member':
+            return '#F17D00';
+        case 'member singleton':
+            return '#BA6000';
+        case 'shard':
+            return '#00C000';
+        case 'entity':
+            return '#046E97';
+        default:
+            return 'red';
     }
 }
 
 function circleRadius(d) {
-    if (d.data.type == 'cluster') {
-        return 10;
-    } else if (d.data.type == 'member') {
-        return 22;
-    } else if (d.data.type == 'shard') {
-        return 12;
-    } else if (d.data.type == 'entity') {
-        return 8;
-    } else {
-        return 3;
+    switch(d.data.type) {
+        case 'cluster':
+            return 10;
+        case 'member':
+        case 'member singleton':
+            return 22;
+        case 'shard':
+            return 12;
+        case 'entity':
+            return 8;
+        default:
+            return 3;
     }
 }
 
@@ -228,18 +233,22 @@ function circleRadiusExit(d) {
 }
 
 function labelOffsetX(d) {
-    if (d.data.type == 'cluster') {
-        offset = 12;
-    } else if (d.data.type == 'member') {
-        offset = 24;
-    } else if (d.data.type == 'shard') {
-        offset = 14;
-    } else if (d.data.type == 'entity') {
-        offset = 10;
-    } else {
-        offset = 5;
+    switch(d.data.type) {
+        case 'cluster':
+            return offset(d, 12);
+        case 'member':
+        case 'member singleton':
+            return offset(d, 24);
+        case 'shard':
+            return offset(d, 14);
+        case 'entity':
+            return offset(d, 10);
+        default:
+            return offset(d, 5);
     }
-    return d.x < Math.PI === !d.children ? offset : -offset;
+    function offset(d, distance) {
+        return d.x < Math.PI === !d.children ? distance : -distance;
+    }
 }
 
 </script>
