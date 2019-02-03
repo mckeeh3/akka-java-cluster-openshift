@@ -44,6 +44,7 @@ public class HttpServerActor extends AbstractLoggingActor {
         return receiveBuilder()
                 .match(EntityMessage.Action.class, this::actionEntity)
                 .match(ClusterSingletonActor.Action.class, this::actionSingleton)
+                .match(StopNode.class, this::stopNode)
                 .build();
     }
 
@@ -68,6 +69,14 @@ public class HttpServerActor extends AbstractLoggingActor {
         }
         if (action.forward) {
             forwardAction(action.asNoForward());
+        }
+    }
+
+    private void stopNode(StopNode stopNode) {
+        log().info("{}", stopNode);
+        if (stopNode.memberAddress.equals(cluster.selfAddress().toString())) {
+            log().info("Stopping node {}", stopNode.memberAddress);
+            cluster.leave(cluster.selfAddress());
         }
     }
 
@@ -184,7 +193,7 @@ public class HttpServerActor extends AbstractLoggingActor {
                         } else if (isCheck && !message.isText()) {
                             throw noMatch();
                         } else if (message.asTextMessage().isStrict()) {
-                            return getTreeAsJson();
+                            return handleClientMessage(message);
                         } else {
                             return TextMessage.create("");
                         }
@@ -192,6 +201,20 @@ public class HttpServerActor extends AbstractLoggingActor {
                 });
 
         return WebSocket.handleWebSocketRequestWith(httpRequest, flow);
+    }
+
+    private Message handleClientMessage(Message message) {
+        String messageText = message.asTextMessage().getStrictText();
+        if (messageText.startsWith("akka.tcp")) {
+            broadcastStopNode(messageText);
+        }
+        return getTreeAsJson();
+    }
+
+    private void broadcastStopNode(String memberAddress) {
+        cluster.state().getMembers().forEach(member -> {
+            forwardAction(new StopNode(memberAddress), member);
+        });
     }
 
     private Message getTreeAsJson() {
@@ -205,6 +228,19 @@ public class HttpServerActor extends AbstractLoggingActor {
 
     static Props props() {
         return Props.create(HttpServerActor.class);
+    }
+
+    static class StopNode implements Serializable {
+        final String memberAddress;
+
+        StopNode(String memberAddress) {
+            this.memberAddress = memberAddress;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("%s[%s]", getClass().getSimpleName(), memberAddress);
+        }
     }
 
     public static class Tree implements Serializable {

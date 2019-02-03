@@ -26,16 +26,16 @@ text {
 
 var webSocket;
 
-function sendWebSocketRequest() {
+function sendWebSocketRequest(request) {
   if (webSocket && webSocket.readyState == WebSocket.OPEN) {
-    webSocket.send('request');
+    webSocket.send(request);
   } else {
     webSocket = new WebSocket('ws://' + location.host + '/events');
     update({ 'name': 'cluster', 'type': 'cluster' });
 
     webSocket.onopen = function(event) {
       console.log('WebSocket connected', event);
-      webSocket.send('request');
+      webSocket.send(request);
     }
 
     webSocket.onmessage = function(event) {
@@ -141,6 +141,8 @@ function update(hierarchy) {
     .attr('class', d => d.data.type)
     .attr('fill', circleColor)
     .attr('r', circleRadius)
+    .attr('cursor', nodeCursor)
+    .on('click', clickCircle)
     .style('opacity', 0.000001);
 
   nodeEnter.append('text')
@@ -248,6 +250,16 @@ function labelOffsetX(d) {
     }
     function offset(d, distance) {
         return d.x < Math.PI === !d.children ? distance : -distance;
+    }
+}
+
+function nodeCursor(d) {
+    return d.data.type.indexOf('member') >= 0 ? 'pointer' : 'default';
+}
+
+function clickCircle(d) {
+    if (d.data.type.indexOf('member') >= 0) {
+        sendWebSocketRequest(d.data.name);
     }
 }
 
