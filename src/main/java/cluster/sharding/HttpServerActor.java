@@ -312,11 +312,6 @@ public class HttpServerActor extends AbstractLoggingActor {
                     child.type = "member";
                 }
             });
-            Tree member = find(memberId, "member singleton");
-            if (member == null) {
-                member = Tree.create(memberId, "member singleton");
-                children.add(member);
-            }
         }
 
         void unsetSingleton(String memberId) {

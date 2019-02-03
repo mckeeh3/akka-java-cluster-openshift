@@ -155,9 +155,10 @@ public class TreeTest {
         tree.setSingleton("member1");
         tree.add("member1", "1", "1");
         Assert.assertNotNull(tree.find("member1", "member"));
-        Assert.assertNotNull(tree.find("member1", "singleton"));
-        Assert.assertNotNull(tree.find("member1", "member singleton"));
+        Assert.assertNull(tree.find("member1", "singleton"));
+        Assert.assertNull(tree.find("member1", "member singleton"));
 
+        tree.setSingleton("member1");
         tree.add("member1", "1", "2");
         Assert.assertNotNull(tree.find("member1", "member"));
         Assert.assertNotNull(tree.find("member1", "singleton"));
