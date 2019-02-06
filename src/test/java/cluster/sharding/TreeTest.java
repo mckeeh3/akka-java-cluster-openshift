@@ -141,37 +141,54 @@ public class TreeTest {
     }
 
     @Test
-    public void setUnsetSingletonWorks() {
+    public void setUnsetTypeWorks() {
         HttpServerActor.Tree tree = testTree();
-        tree.setSingleton("member2");
-        HttpServerActor.Tree member2 = tree.find("member2", "member singleton");
-        Assert.assertNotNull(member2);
+        tree.setMemberType("member2", "singleton");
+        Assert.assertNotNull(tree.find("member2", "singleton"));
+        Assert.assertNotNull(tree.find("member2", "member"));
 
-        tree.unsetSingleton("member2");
-        member2 = tree.find("member2", "member");
-        Assert.assertNotNull(member2);
+        tree.unsetMemberType("member2", "singleton");
+        Assert.assertNotNull(tree.find("member2", "member"));
+        Assert.assertNull(tree.find("member2", "singleton"));
 
         tree = HttpServerActor.Tree.create("cluster", "cluster");
-        tree.setSingleton("member1");
+        tree.setMemberType("member1", "singleton");
         tree.add("member1", "1", "1");
         Assert.assertNotNull(tree.find("member1", "member"));
         Assert.assertNull(tree.find("member1", "singleton"));
-        Assert.assertNull(tree.find("member1", "member singleton"));
 
-        tree.setSingleton("member1");
+        tree.setMemberType("member1", "singleton");
         tree.add("member1", "1", "2");
         Assert.assertNotNull(tree.find("member1", "member"));
         Assert.assertNotNull(tree.find("member1", "singleton"));
-        Assert.assertNotNull(tree.find("member1", "member singleton"));
 
         tree.add("member2", "2", "3");
         Assert.assertNotNull(tree.find("member1", "member"));
         Assert.assertNotNull(tree.find("member1", "singleton"));
-        Assert.assertNotNull(tree.find("member1", "member singleton"));
 
         Assert.assertNotNull(tree.find("member2", "member"));
         Assert.assertNull(tree.find("member2", "singleton"));
-        Assert.assertNull(tree.find("member2", "member singleton"));
+
+        tree.setMemberType("member1", "singleton");
+        tree.setMemberType("member1", "httpServer");
+        tree.add("member1", "1", "2");
+        Assert.assertNotNull(tree.find("member1", "member"));
+        Assert.assertNotNull(tree.find("member1", "singleton"));
+        Assert.assertNotNull(tree.find("member1", "httpServer"));
+
+        tree = HttpServerActor.Tree.create("cluster", "cluster");
+        tree.add("member1", "1", "1");
+        tree.add("member2", "2", "2");
+        tree.add("member3", "2", "3");
+        tree.setMemberType("member1", "singleton");
+        tree.setMemberType("member1", "httpServer");
+        Assert.assertNotNull(tree.find("member1", "httpServer"));
+        tree.setMemberType("member3", "httpServer");
+        Assert.assertNotNull(tree.find("member1", "member"));
+        Assert.assertNotNull(tree.find("member1", "singleton"));
+        Assert.assertNull(tree.find("member1", "httpServer"));
+        Assert.assertNotNull(tree.find("member3", "member"));
+        Assert.assertNotNull(tree.find("member3", "httpServer"));
     }
 
     @Test

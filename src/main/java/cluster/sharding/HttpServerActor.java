@@ -63,9 +63,9 @@ public class HttpServerActor extends AbstractLoggingActor {
     private void actionSingleton(ClusterSingletonActor.Action action) {
         log().info("Singleton {} <-- {}", action, sender());
         if (action.action.equals("start")) {
-            tree.setSingleton(action.member);
+            tree.setMemberType(action.member, "singleton");
         } else if (action.action.equals("stop")) {
-            tree.unsetSingleton(action.member);
+            tree.unsetMemberType(action.member, "singleton");
         }
         if (action.forward) {
             forwardAction(action.asNoForward());
@@ -218,6 +218,7 @@ public class HttpServerActor extends AbstractLoggingActor {
     }
 
     private Message getTreeAsJson() {
+        tree.setMemberType(cluster.selfAddress().toString(), "httpServer");
         return TextMessage.create(tree.toJson());
     }
 
@@ -340,20 +341,23 @@ public class HttpServerActor extends AbstractLoggingActor {
             return null;
         }
 
-        void setSingleton(String memberId) {
+        void setMemberType(String memberId, String type) {
             children.forEach(child -> {
                 if (child.name.equals(memberId)) {
-                    child.type = "member singleton";
-                } else if (child.type.equals("member singleton")) {
-                    child.type = "member";
+                    if (!child.type.contains(type)) {
+                        child.type = child.type + " " + type;
+                    }
+                } else if (child.type.contains(type)) {
+                    unsetMemberType(child.name, type);
                 }
             });
         }
 
-        void unsetSingleton(String memberId) {
-            Tree member = find(memberId, "member singleton");
+        void unsetMemberType(String memberId, String type) {
+            Tree member = find(memberId, type);
             if (member != null) {
-                member.type = "member";
+                member.type = member.type.replaceAll(type, "");
+                member.type = member.type.replaceAll(" +", " ");
             }
         }
 

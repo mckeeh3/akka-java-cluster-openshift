@@ -55,7 +55,7 @@ function sendWebSocketRequest(request) {
 }
 
 const width = 1600;
-const height = 1200;
+const height = 1100;
 const radius = height / 2;
 const tree = d3.tree().size([2 * Math.PI, radius - 75]);
 
@@ -198,35 +198,34 @@ function nodeId(d) {
 }
 
 function circleColor(d) {
-    switch(d.data.type) {
-        case 'cluster':
-            return '#B30000';
-        case 'member':
-            return '#F17D00';
-        case 'member singleton':
-            return '#BA6000';
-        case 'shard':
-            return '#00C000';
-        case 'entity':
-            return '#046E97';
-        default:
-            return 'red';
+    if (d.data.type.includes('entity')) {
+        return '#046E97';
+    } else if (d.data.type.includes('shard')) {
+        return '#00C000';
+    } else if (d.data.type.includes('singleton')) {
+        return '#BA6000';
+    } else if (d.data.type.includes('httpServer')) {
+        return '#F3B500';
+    } else if (d.data.type.includes('member')) {
+        return '#F17D00';
+    } else if (d.data.type.includes('cluster')) {
+        return '#B30000';
+    } else {
+        return 'red';
     }
 }
 
 function circleRadius(d) {
-    switch(d.data.type) {
-        case 'cluster':
-            return 10;
-        case 'member':
-        case 'member singleton':
-            return 22;
-        case 'shard':
-            return 12;
-        case 'entity':
-            return 8;
-        default:
-            return 3;
+    if (d.data.type.includes('entity')) {
+        return 8;
+    } else if (d.data.type.includes('shard')) {
+        return 12;
+    } else if (d.data.type.includes('member')) {
+        return 22;
+    } else if (d.data.type.includes('cluster')) {
+        return 10;
+    } else {
+        return 3;
     }
 }
 
@@ -235,19 +234,18 @@ function circleRadiusExit(d) {
 }
 
 function labelOffsetX(d) {
-    switch(d.data.type) {
-        case 'cluster':
-            return offset(d, 12);
-        case 'member':
-        case 'member singleton':
-            return offset(d, 24);
-        case 'shard':
-            return offset(d, 14);
-        case 'entity':
-            return offset(d, 10);
-        default:
-            return offset(d, 5);
+    if (d.data.type.includes('entity')) {
+        return offset(d, 10);
+    } else if (d.data.type.includes('shard')) {
+        return offset(d, 14);
+    } else if (d.data.type.includes('member')) {
+        return offset(d, 24);
+    } else if (d.data.type.includes('cluster')) {
+        return offset(d, 12);
+    } else {
+        return offset(d, 5);
     }
+
     function offset(d, distance) {
         return d.x < Math.PI === !d.children ? distance : -distance;
     }
