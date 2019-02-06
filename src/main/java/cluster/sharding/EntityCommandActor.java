@@ -14,7 +14,6 @@ import java.util.concurrent.TimeUnit;
 class EntityCommandActor extends AbstractLoggingActor {
     private final ActorRef shardRegion;
     private Cancellable ticker;
-    private final int messageRatePerSec = 10;
     private int messageNumber;
     private final Receive sending;
     private final Receive receiving;
@@ -76,6 +75,7 @@ class EntityCommandActor extends AbstractLoggingActor {
 
     private void scheduleMessageRateTicker(Object event) {
         int memberCount = cluster.state().members().size();
+        int messageRatePerSec = 10;
         int millsPerMessage = 1000 / messageRatePerSec * (memberCount == 0 ? 3 : memberCount);
         log().info("Message interval {}ms, cluster member count {}, {}", millsPerMessage, memberCount, event);
 
