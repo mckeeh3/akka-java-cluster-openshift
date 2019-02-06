@@ -65,6 +65,7 @@ function sendWebSocketRequest(request) {
     }
   }
 }
+
 const chartDiv = document.getElementById('chart');
 const width = chartDiv.clientWidth;
 const height = chartDiv.clientHeight;
@@ -164,6 +165,9 @@ function update(hierarchy) {
     .attr('transform', d => d.x >= Math.PI ? 'rotate(180)' : null)
     .style('opacity', 0.000001)
     .text(d => d.data.name);
+
+  nodeEnter.append('title')
+    .text(d => d.data.type);
 
   node.transition(t2)
     .attr('transform', d => `rotate(${d.x * 180 / Math.PI - 90}) translate(${d.y},0)`)

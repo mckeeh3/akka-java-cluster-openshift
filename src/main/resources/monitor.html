@@ -163,6 +163,9 @@ function update(hierarchy) {
     .style('opacity', 0.000001)
     .text(d => d.data.name);
 
+  nodeEnter.append('title')
+    .text(d => d.data.type);
+
   node.transition(t2)
     .attr('transform', d => `rotate(${d.x * 180 / Math.PI - 90}) translate(${d.y},0)`)
     .select('circle.entity')
