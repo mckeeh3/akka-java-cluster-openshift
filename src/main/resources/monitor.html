@@ -2,6 +2,15 @@
 <meta charset='utf-8'>
 <style>
 
+/* Make the chart container fill the page using CSS. */
+#chart {
+  position: fixed;
+  left: 0px;
+  right: 0px;
+  top: 0px;
+  bottom: 0px;
+}
+
 g {
   width: inherit;
   height: inherit;
@@ -20,7 +29,7 @@ text {
 }
 
 </style>
-<svg></svg>
+<div id='chart'><svg></svg></div>
 <script src="d3/d3.v5.js"></script>
 <script>
 
@@ -54,8 +63,9 @@ function sendWebSocketRequest(request) {
   }
 }
 
-const width = 1600;
-const height = 1100;
+const chartDiv = document.getElementById('chart');
+const width = chartDiv.clientWidth;
+const height = chartDiv.clientHeight;
 const radius = height / 2;
 const tree = d3.tree().size([2 * Math.PI, radius - 75]);
 
