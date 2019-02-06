@@ -43,20 +43,6 @@ public class Runner {
         ClusterBootstrap.get(actorSystem).start();
     }
 
-    private static void registerMemberEvents(ActorSystem actorSystem) {
-        Cluster cluster = Cluster.get(actorSystem);
-        cluster.registerOnMemberUp(() -> memberUp(actorSystem, cluster.selfMember()));
-        cluster.registerOnMemberRemoved(() -> memberRemoved(actorSystem, cluster.selfMember()));
-    }
-
-    private static void memberUp(ActorSystem actorSystem, Member member) {
-        actorSystem.log().info("Member up {}", member);
-    }
-
-    private static void memberRemoved(ActorSystem actorSystem, Member member) {
-        actorSystem.log().info("Member removed {}", member);
-    }
-
     private static ActorRef setupClusterSharding(ActorSystem actorSystem, ActorRef httpServer) {
         ClusterShardingSettings settings = ClusterShardingSettings.create(actorSystem);
         return ClusterSharding.get(actorSystem).start(
@@ -85,5 +71,19 @@ public class Runner {
                     actorSystem.log().warning("Coordinated shutdown phase {}", coordindateShutdownPhase);
                     return CompletableFuture.completedFuture(Done.getInstance());
                 });
+    }
+
+    private static void registerMemberEvents(ActorSystem actorSystem) {
+        Cluster cluster = Cluster.get(actorSystem);
+        cluster.registerOnMemberUp(() -> memberUp(actorSystem, cluster.selfMember()));
+        cluster.registerOnMemberRemoved(() -> memberRemoved(actorSystem, cluster.selfMember()));
+    }
+
+    private static void memberUp(ActorSystem actorSystem, Member member) {
+        actorSystem.log().info("Member up {}", member);
+    }
+
+    private static void memberRemoved(ActorSystem actorSystem, Member member) {
+        actorSystem.log().info("Member removed {}", member);
     }
 }
