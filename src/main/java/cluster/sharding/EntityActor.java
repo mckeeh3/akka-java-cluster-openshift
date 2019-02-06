@@ -2,7 +2,6 @@ package cluster.sharding;
 
 import akka.actor.*;
 import akka.cluster.Cluster;
-import akka.cluster.Member;
 import akka.cluster.sharding.ShardRegion;
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
