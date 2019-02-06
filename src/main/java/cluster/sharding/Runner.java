@@ -63,12 +63,12 @@ public class Runner {
         actorSystem.actorOf(clusterSingletonManagerProps, "clusterSingletonManager");
     }
 
-    private static void addCoordinatedShutdownTask(ActorSystem actorSystem, String coordindateShutdownPhase) {
+    private static void addCoordinatedShutdownTask(ActorSystem actorSystem, String coordinatedShutdownPhase) {
         CoordinatedShutdown.get(actorSystem).addTask(
-                coordindateShutdownPhase,
-                coordindateShutdownPhase,
+                coordinatedShutdownPhase,
+                coordinatedShutdownPhase,
                 () -> {
-                    actorSystem.log().warning("Coordinated shutdown phase {}", coordindateShutdownPhase);
+                    actorSystem.log().warning("Coordinated shutdown phase {}", coordinatedShutdownPhase);
                     return CompletableFuture.completedFuture(Done.getInstance());
                 });
     }
