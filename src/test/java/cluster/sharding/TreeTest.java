@@ -192,6 +192,39 @@ public class TreeTest {
     }
 
     @Test
+    public void leafCountWorks() {
+        HttpServerActor.Tree tree = HttpServerActor.Tree.create("cluster", "cluster");
+        tree.add("member1", "shard1", "entity1");
+        Assert.assertEquals(1, tree.leafCount());
+
+        tree.add("member2", "2", "2");
+        tree.add("member3", "2", "3");
+        Assert.assertEquals(3, tree.leafCount());
+
+        Assert.assertEquals(36, testTree().leafCount());
+    }
+
+    @Test
+    public void eventCountWorks() {
+        HttpServerActor.Tree tree = testTree();
+        tree.incrementEvents("member1", "shard01", "entity01");
+        tree.incrementEvents("member1", "shard01", "entity01");
+
+        Assert.assertEquals(2, tree.eventsCount());
+
+        tree.incrementEvents("member2", "shard04", "entity12");
+        tree.incrementEvents("member3", "shard09", "entity27");
+
+        Assert.assertEquals(4, tree.eventsCount());
+
+        tree.incrementEvents("member2", "shard04", "entity12");
+        tree.incrementEvents("member3", "shard09", "entity27");
+        tree.incrementEvents("member3", "shard09", "entity27");
+
+        Assert.assertEquals(7, tree.eventsCount());
+    }
+
+    @Test
     public void toJson() {
         String json = testTree().toJson();
         Assert.assertNotNull(json);

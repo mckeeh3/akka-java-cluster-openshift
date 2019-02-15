@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -247,6 +248,7 @@ public class HttpServerActor extends AbstractLoggingActor {
     public static class Tree implements Serializable {
         public final String name;
         public String type;
+        public int events;
         public final List<Tree> children = new ArrayList<>();
 
         public Tree(String name, String type) {
@@ -313,7 +315,14 @@ public class HttpServerActor extends AbstractLoggingActor {
             }
         }
 
-        Tree find(String memberId, String shardId, String entityId) {
+        void incrementEvents(String memberId, String shardId, String entityId) {
+            Tree entity = find(memberId, shardId, entityId);
+            if (entity != null) {
+                entity.events += 1;
+            }
+        }
+
+        private Tree find(String memberId, String shardId, String entityId) {
             Tree member = find(memberId, "member");
             if (member != null) {
                 Tree shard = member.find(shardId, "shard");
@@ -361,6 +370,22 @@ public class HttpServerActor extends AbstractLoggingActor {
             }
         }
 
+        int leafCount() {
+            if (children.size() > 0) {
+                return children.stream().mapToInt(Tree::leafCount).sum();
+            } else {
+                return 1;
+            }
+        }
+
+        int eventsCount() {
+            if (children.size() > 0) {
+                return children.stream().mapToInt(Tree::eventsCount).sum();
+            } else {
+                return events;
+            }
+        }
+
         String toJson() {
             ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
             try {
@@ -372,7 +397,66 @@ public class HttpServerActor extends AbstractLoggingActor {
 
         @Override
         public String toString() {
-            return String.format("%s[%s, %s]", getClass().getSimpleName(), name, type);
+            return String.format("%s[%s, %s, %d]", getClass().getSimpleName(), name, type, events);
+        }
+    }
+
+    public static class Statistics {
+        public final int statisticCount;
+        public final int intervalTimeMillis;
+        public final List<Statistic> statistics;
+
+        public Statistics(int statisticCount, int intervalTimeMillis) {
+            this.statisticCount = statisticCount;
+            this.intervalTimeMillis = intervalTimeMillis;
+
+            statistics = new ArrayList<>();
+            initStatistics();
+        }
+
+        void add(Statistic statistic) {
+            statistics.add(statistic);
+            if (statistics.size() > statisticCount) {
+                statistics.remove(0);
+            }
+        }
+
+        private void initStatistics() {
+            Instant time = Instant.now();
+            for (int i = 0; i < statisticCount; i++) {
+                add(new Statistic(time, 0, 0));
+                time = time.minusMillis(intervalTimeMillis);
+            }
+        }
+
+        String toJson() {
+            ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+            try {
+                return ow.writeValueAsString(this);
+            } catch (JsonProcessingException e) {
+                return String.format("{ \"error\" : \"%s\" }", e.getMessage());
+            }
+        }
+    }
+
+    public static class Statistic {
+        public final long time;
+        public final int entityCount;
+        public final int commandCount;
+
+        public Statistic(long time, int entityCount, int commandCount) {
+            this.time = time;
+            this.entityCount = entityCount;
+            this.commandCount = commandCount;
+        }
+
+        public Statistic(Instant time, int entityCount, int commandCount) {
+            this(time.toEpochMilli(), entityCount, commandCount);
+        }
+
+        @Override
+        public String toString() {
+            return String.format("%s[%s, %d, %d]", getClass().getSimpleName(), Instant.ofEpochMilli(time), entityCount, commandCount);
         }
     }
 }
