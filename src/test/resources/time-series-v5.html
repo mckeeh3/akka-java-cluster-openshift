@@ -30,9 +30,33 @@
 <script src='d3/d3.v5.js'></script>
 <script>
 
-activityChart('.graph');
+const entityCountExtractor = function(statistic) {
+    return 0;
+}
 
-function activityChart(activityTagSelect) {
+const commandCountExtractor = function(statistic) {
+    return 0;
+}
+
+const entityCountChart = activityChart('.graph', entityCountExtractor);
+
+function activityChart(activityTagSelect, countExtractor) {
+
+    var data = {
+        statistics: [
+            { time: Date.now() - 2 * 60 * 1000, entityCount: 0, commandCount: 0 },
+            { time: Date.now(), entityCount: 0, commandCount: 0 }
+        ]
+    }
+
+    function dataFirst() {
+        return data.statistics[0];
+    }
+
+    function dataLast() {
+        return data.statistics[data.statistics.length - 1];
+    }
+
     const graphDiv = d3.select(activityTagSelect);
 
     const margin = {top: 20, right: 0, bottom: 20, left: 0},
@@ -50,8 +74,8 @@ function activityChart(activityTagSelect) {
     const formatNumber = d3.format('d'),
           duration = 5000;
 
-    const timeStart = new Date(Date.now() - 24 * duration),
-          timeEnd = new Date(Date.now());
+    const timeStart = new Date(dataFirst().time),
+          timeEnd = new Date(dataLast().time);
 
     const x = d3.scaleTime()
                 .domain([timeStart, timeEnd])
@@ -127,6 +151,7 @@ function activityChart(activityTagSelect) {
             .transition()
             .duration(1000)
             .ease(d3.easeLinear)
+            // .attr('transform', 'translate(' + x(now - (24 - 1) * 1000) + ')')
             .attr('transform', 'translate(' + x(now - (24 - 1) * 1000) + ')')
             .on('end', tick);
     }
@@ -141,5 +166,35 @@ function activityChart(activityTagSelect) {
         update: update
     }
 }
+
+function dataInit(count) {
+    data = {
+        statistics: []
+    }
+
+    var time = Date.now();
+    for (var i = 0; i < count; i++) {
+        data.statistics.push({
+            time: time,
+            entityCount: Math.round(Math.random(10) * 20 + 10),
+            commandCount: Math.round(Math.random(10) * 5 + 1)
+        });
+        time -= Math.round(Math.random() * 250 + 900);
+    }
+
+    return data;
+}
+
+function dataUpdate(data) {
+    data.statistics.push({
+        time: Date.now(),
+        entityCount: Math.round(Math.random(10) * 20 + 10),
+        commandCount: Math.round(Math.random(10) * 5 + 1)
+    });
+    data.statistics.shift();
+}
+
+entityCountChart.update(dataInit(120));
+setInterval(1000, dataUpdate, entityCountChart.data);
 
 </script>
