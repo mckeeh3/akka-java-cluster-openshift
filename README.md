@@ -44,7 +44,7 @@ akka-cluster-demo   3/3     3            3           12m
 
 expose the deployment, create a service: 
 
-expose deployment/akka-cluster-demo --type=NodePort --port 8080
+kubectl expose deployment/akka-cluster-demo --type=NodePort --port 8080
 
 export a NODE_PORT evironment variable: 
 
