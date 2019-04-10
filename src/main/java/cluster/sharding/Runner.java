@@ -8,7 +8,7 @@ import akka.cluster.sharding.ClusterSharding;
 import akka.cluster.sharding.ClusterShardingSettings;
 import akka.cluster.singleton.ClusterSingletonManager;
 import akka.cluster.singleton.ClusterSingletonManagerSettings;
-import akka.management.AkkaManagement;
+import akka.management.scaladsl.AkkaManagement;
 import akka.management.cluster.bootstrap.ClusterBootstrap;
 
 import java.util.concurrent.CompletableFuture;
@@ -25,17 +25,18 @@ public class Runner {
 
         actorSystem.log().info("Started actor system '{}', member {}", actorSystem, actorSystem.provider().getDefaultAddress());
 
-        actorSystem.actorOf(ClusterListenerActor.props(), "clusterListener");
-        ActorRef httpServer = actorSystem.actorOf(HttpServerActor.props(), "httpServer");
-        ActorRef shardingRegion = setupClusterSharding(actorSystem, httpServer);
-        createClusterSingletonManagerActor(actorSystem, httpServer);
+        Cluster.get(actorSystem).registerOnMemberUp(() -> {
+           actorSystem.actorOf(ClusterListenerActor.props(), "clusterListener");
+           ActorRef httpServer = actorSystem.actorOf(HttpServerActor.props(), "httpServer");
+           ActorRef shardingRegion = setupClusterSharding(actorSystem, httpServer);
+           createClusterSingletonManagerActor(actorSystem, httpServer);
+           actorSystem.actorOf(EntityCommandActor.props(shardingRegion), "entityCommand");
+           actorSystem.actorOf(EntityQueryActor.props(shardingRegion), "entityQuery");
+           addCoordinatedShutdownTask(actorSystem, CoordinatedShutdown.PhaseClusterShutdown());
+           registerMemberEvents(actorSystem);
+        });
 
-        actorSystem.actorOf(EntityCommandActor.props(shardingRegion), "entityCommand");
-        actorSystem.actorOf(EntityQueryActor.props(shardingRegion), "entityQuery");
 
-        addCoordinatedShutdownTask(actorSystem, CoordinatedShutdown.PhaseClusterShutdown());
-
-        registerMemberEvents(actorSystem);
     }
 
     private static void startClusterBootstrap(ActorSystem actorSystem) {

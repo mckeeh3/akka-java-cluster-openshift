@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Runner 2" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="cluster.sharding.Runner" />
+    <module name="akka-cluster-openshift" />
+    <option name="VM_PARAMETERS" value="-Dconfig.resource=local.conf -Dakka.management.http.hostname=&quot;127.0.0.2&quot; -Dakka.remote.netty.tcp.hostname=&quot;127.0.0.2&quot;" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

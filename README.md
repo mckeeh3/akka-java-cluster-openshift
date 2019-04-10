@@ -1,4 +1,5 @@
 # akka-java-cluster-openshift
+
 An Akka Java cluster OpenShift demo application 
 
 
@@ -63,3 +64,22 @@ echo $NODE_PORT
 hit your browser with the combined:
 
 http://192.168.99.100:32219
+
+## Running locally
+
+Can be run locally by using local config Discovery rather than the Kubernetes API and having Akka Management and Akka Remoting listening on different interfaces.
+
+Run two instances of `Runner` with the following JVM options:
+
+`-Dconfig.resource=local.conf -Dakka.management.http.hostname="127.0.0.1" -Dakka.remote.netty.tcp.hostname="127.0.0.1"`
+`-Dconfig.resource=local.conf -Dakka.management.http.hostname="127.0.0.2" -Dakka.remote.netty.tcp.hostname="127.0.0.2"`
+
+For IntelliJ two configurations are provided called `Runner_1` and `Runner_2`.
+
+On Mac you may need to:
+
+```
+sudo ifconfig lo0 alias 127.0.0.2 up
+```
+
+

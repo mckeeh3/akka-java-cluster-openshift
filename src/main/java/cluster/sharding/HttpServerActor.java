@@ -23,16 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 
 import java.io.*;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 public class HttpServerActor extends AbstractLoggingActor {
     private ActorSystem actorSystem = context().system();
@@ -104,19 +99,12 @@ public class HttpServerActor extends AbstractLoggingActor {
 
     private void startHttpServer() {
         int serverPort = 8080;
-
-        try {
-            CompletionStage<ServerBinding> serverBindingCompletionStage = Http.get(actorSystem)
-                    .bindAndHandleSync(this::handleHttpRequest, ConnectHttp.toHost(InetAddress.getLocalHost().getHostName(), serverPort), actorMaterializer);
-
-            serverBindingCompletionStage.toCompletableFuture().get(15, TimeUnit.SECONDS);
-        } catch (UnknownHostException e) {
-            log().error(e, "Unable to access hostname");
-        } catch (InterruptedException | TimeoutException | ExecutionException e) {
-            log().error(e, "Monitor HTTP server error");
-        } finally {
-            log().info("HTTP server started on port {}", serverPort);
-        }
+        String host = Cluster.get(actorSystem).selfAddress().host().get();
+        CompletionStage<ServerBinding> serverBindingCompletionStage = Http.get(actorSystem)
+           .bindAndHandleSync(this::handleHttpRequest, ConnectHttp.toHost(host, serverPort), actorMaterializer);
+        serverBindingCompletionStage.thenAccept(sb -> {
+            log().info("HTTP server started on port {}", sb);
+        });
     }
 
     private HttpResponse handleHttpRequest(HttpRequest httpRequest) {
