@@ -5,15 +5,15 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>akka-java</groupId>
-    <artifactId>akka-cluster-openshift</artifactId>
+    <artifactId>cluster-sharding-openshift</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
         <java.version>8</java.version>
         <scala.version>2.12</scala.version>
-        <akka.version>2.5.20</akka.version>
-        <akka.http.version>10.1.7</akka.http.version>
-        <akka.cluster.bootstrap.version>0.20.0</akka.cluster.bootstrap.version>
+        <akka.version>2.5.22</akka.version>
+        <akka.http.version>10.1.8</akka.http.version>
+        <akka.cluster.bootstrap.version>1.0.0</akka.cluster.bootstrap.version>
         <docker.image.version>1.0.2</docker.image.version>
         <jackson.version>2.9.8</jackson.version>
         <junit.version>4.12</junit.version>

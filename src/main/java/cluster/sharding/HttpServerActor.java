@@ -90,10 +90,10 @@ public class HttpServerActor extends AbstractLoggingActor {
     }
 
     private void forwardAction(Object action, Member member) {
-        String path = member.address().toString() + self().path().toStringWithoutAddress();
-        ActorSelection actorSelection = context().actorSelection(path);
-        log().debug("{} --> {}", action, actorSelection);
-        actorSelection.tell(action, self());
+        String httpServerPath = member.address().toString() + self().path().toStringWithoutAddress();
+        ActorSelection httpServer = context().actorSelection(httpServerPath);
+        log().debug("{} --> {}", action, httpServer);
+        httpServer.tell(action, self());
     }
 
     @Override
@@ -213,9 +213,7 @@ public class HttpServerActor extends AbstractLoggingActor {
     }
 
     private void broadcastStopNode(String memberAddress) {
-        cluster.state().getMembers().forEach(member -> {
-            forwardAction(new StopNode(memberAddress), member);
-        });
+        cluster.state().getMembers().forEach(member -> forwardAction(new StopNode(memberAddress), member));
     }
 
     private Message getTreeAsJson() {
