@@ -4,7 +4,6 @@ metadata:
   labels:
     app: akka-cluster-demo
   name: akka-cluster-demo
-  namespace: akka-cluster-1
 spec:
   replicas: 3
   selector:
