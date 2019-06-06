@@ -211,7 +211,7 @@
                                     <exec>
                                         <args>/bin/sh</args>
                                         <args>-c</args>
-                                        <args>java -jar /maven/akka-cluster-openshift.jar</args>
+                                        <args>java $JAVA_OPTS -jar /maven/akka-cluster-openshift.jar</args>
                                     </exec>
                                 </entryPoint>
                                 <assembly>

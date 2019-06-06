@@ -43,6 +43,8 @@ spec:
           containerPort: 8558
           protocol: TCP
         env:
+          - name: JAVA_OPTS
+            value: "-Xmx128m -Xms128m"
           - name: NAMESPACE
             valueFrom:
               fieldRef:
