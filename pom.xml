@@ -11,7 +11,7 @@
     <properties>
         <java.version>8</java.version>
         <scala.version>2.12</scala.version>
-        <akka.version>2.5.22</akka.version>
+        <akka.version>2.5.23</akka.version>
         <akka.http.version>10.1.8</akka.http.version>
         <akka.cluster.bootstrap.version>1.0.0</akka.cluster.bootstrap.version>
         <docker.image.version>1.0.2</docker.image.version>
@@ -220,9 +220,9 @@
                                             <dependencySet>
                                                 <useProjectAttachments>true</useProjectAttachments>
                                                 <includes>
-                                                    <include>akka-java:akka-cluster-openshift:jar:allinone</include>
+                                                    <include>akka-java:cluster-sharding-openshift:jar:allinone</include>
                                                 </includes>
-                                                <outputFileNameMapping>akka-cluster-openshift.jar</outputFileNameMapping>
+                                                <outputFileNameMapping>cluster-sharding-openshift.jar</outputFileNameMapping>
                                             </dependencySet>
                                         </dependencySets>
                                     </inline>
