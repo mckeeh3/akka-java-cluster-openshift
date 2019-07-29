@@ -107,11 +107,9 @@ public class HttpServerActor extends AbstractLoggingActor {
 
         try {
             CompletionStage<ServerBinding> serverBindingCompletionStage = Http.get(actorSystem)
-                    .bindAndHandleSync(this::handleHttpRequest, ConnectHttp.toHost(InetAddress.getLocalHost().getHostName(), serverPort), actorMaterializer);
+                    .bindAndHandleSync(this::handleHttpRequest, ConnectHttp.toHost("0.0.0.0", serverPort), actorMaterializer);
 
             serverBindingCompletionStage.toCompletableFuture().get(15, TimeUnit.SECONDS);
-        } catch (UnknownHostException e) {
-            log().error(e, "Unable to access hostname");
         } catch (InterruptedException | TimeoutException | ExecutionException e) {
             log().error(e, "Monitor HTTP server error");
         } finally {
