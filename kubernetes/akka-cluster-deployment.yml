@@ -26,9 +26,20 @@ spec:
       - name: akka-cluster-demo
         image: akka-cluster-demo:1.0.2
         imagePullPolicy: Never
+        readinessProbe:
+          httpGet:
+            path: "/ready"
+            port: management
+          periodSeconds: 2
+          failureThreshold: 20
+          initialDelaySeconds: 2
         livenessProbe:
-          tcpSocket:
-            port: 8558
+          httpGet:
+            path: "/alive"
+            port: management
+          periodSeconds: 2
+          failureThreshold: 20
+          initialDelaySeconds: 2
         ports:
         - name: http
           containerPort: 8080
