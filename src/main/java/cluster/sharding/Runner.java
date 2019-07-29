@@ -27,11 +27,14 @@ public class Runner {
 
         actorSystem.actorOf(ClusterListenerActor.props(), "clusterListener");
         ActorRef httpServer = actorSystem.actorOf(HttpServerActor.props(), "httpServer");
-        ActorRef shardingRegion = setupClusterSharding(actorSystem, httpServer);
-        createClusterSingletonManagerActor(actorSystem, httpServer);
 
-        actorSystem.actorOf(EntityCommandActor.props(shardingRegion), "entityCommand");
-        actorSystem.actorOf(EntityQueryActor.props(shardingRegion), "entityQuery");
+        Cluster.get(actorSystem).registerOnMemberUp(() -> {
+            ActorRef shardingRegion = setupClusterSharding(actorSystem, httpServer);
+            createClusterSingletonManagerActor(actorSystem, httpServer);
+
+            actorSystem.actorOf(EntityCommandActor.props(shardingRegion), "entityCommand");
+            actorSystem.actorOf(EntityQueryActor.props(shardingRegion), "entityQuery");
+        });
 
         addCoordinatedShutdownTask(actorSystem, CoordinatedShutdown.PhaseClusterShutdown());
 
